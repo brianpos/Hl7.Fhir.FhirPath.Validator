@@ -9,60 +9,30 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-namespace Engine.R4B.Helpers
+namespace Hl7.Fhir.FhirPath.Validator
 {
-    public struct NodeProps
+    public partial class FhirPathExpressionVisitor : ExpressionVisitor<FhirPathVisitorProps>
     {
-        public NodeProps(ClassMapping classMapping, PropertyMapping propMap = null)
-        {
-            ClassMapping = classMapping;
-            IsCollection = propMap?.IsCollection == true;
-            PropertyMapping = propMap;
-        }
-
-        public ClassMapping ClassMapping { get; set; }
-        public PropertyMapping PropertyMapping { get; set; }
-        public bool IsCollection { get; set; }
-    }
-
-    public class FhirPathVisitorProps
-    {
-        public bool isRoot;
-        public readonly Collection<NodeProps> Types = new();
-
-        public void AddType(ModelInspector mi, Type type)
-        {
-            var cm = mi.FindOrImportClassMapping(type);
-            if (cm != null)
-            {
-                Types.Add(new NodeProps(cm));
-            }
-        }
-
-        public override string ToString()
-        {
-            return String.Join(", ", Types.Select(v =>
-            {
-                if (v.IsCollection)
-                    return $"{v.ClassMapping.Name}[]";
-                return v.ClassMapping.Name;
-            }).Distinct());
-        }
-    }
-
-    public class FhirPathExpressionVisitor : ExpressionVisitor<FhirPathVisitorProps>
-    {
-        public Hl7.Fhir.Model.OperationOutcome Outcome { get; } = new Hl7.Fhir.Model.OperationOutcome();
-
-        private Stack<FhirPathVisitorProps> _stack = new();
-        private readonly StringBuilder _result = new StringBuilder();
-        private int _indent = 0;
-        public FhirPathExpressionVisitor(ModelInspector mi)
+        public FhirPathExpressionVisitor(ModelInspector mi, List<string> SupportedResources, Type[] OpenTypes)
         {
             _mi = mi;
+            _supportedResources = SupportedResources;
+            _openTypes = OpenTypes;
+
+            // Register some FHIR Standard variables (const strings)
             RegisterVariable("ucum", typeof(Hl7.Fhir.Model.FhirString));
             RegisterVariable("sctt", typeof(Hl7.Fhir.Model.FhirString));
         }
+
+        private readonly ModelInspector _mi;
+        private readonly List<string> _supportedResources;
+        private readonly Type[] _openTypes;
+
+        public Hl7.Fhir.Model.OperationOutcome Outcome { get; } = new Hl7.Fhir.Model.OperationOutcome();
+
+        private readonly Stack<FhirPathVisitorProps> _stack = new();
+        private readonly StringBuilder _result = new();
+        private int _indent = 0;
 
         public void RegisterVariable(string name, Type type)
         {
@@ -72,14 +42,14 @@ namespace Engine.R4B.Helpers
                 variables.Add(name, cm);
             }
         }
-        private Dictionary<string, ClassMapping> variables = new();
+        private readonly Dictionary<string, ClassMapping> variables = new();
 
         public override string ToString()
         {
             return _result.ToString();
         }
 
-        private Collection<ClassMapping> _inputTypes = new();
+        private readonly Collection<ClassMapping> _inputTypes = new();
         public void AddInputType(Type t)
         {
             var cm = _mi.FindOrImportClassMapping(t);
@@ -88,7 +58,6 @@ namespace Engine.R4B.Helpers
                 _inputTypes.Add(cm);
             }
         }
-        ModelInspector _mi;
 
         public override FhirPathVisitorProps VisitConstant(ConstantExpression expression)
         {
@@ -102,7 +71,7 @@ namespace Engine.R4B.Helpers
             return r;
         }
 
-        private string[] boolFuncs = new[]
+        private readonly string[] boolFuncs = new[]
         {
             "empty",
             "exists",
@@ -151,7 +120,7 @@ namespace Engine.R4B.Helpers
             "comparable",
         }.ToArray();
 
-        private string[] stringFuncs = new[]
+        private readonly string[] stringFuncs = new[]
         {
             "toString",
             "upper",
@@ -170,7 +139,7 @@ namespace Engine.R4B.Helpers
             "replace",
         }.ToArray();
 
-        private string[] passthroughFuncs = new[]
+        private readonly string[] passthroughFuncs = new[]
         {
             "where",
             "trace",
@@ -181,7 +150,7 @@ namespace Engine.R4B.Helpers
             "tail"
         }.ToArray();
 
-        private string[] mathFuncs = new[]
+        private readonly string[] mathFuncs = new[]
         {
             "+",
             "-",
@@ -230,7 +199,7 @@ namespace Engine.R4B.Helpers
             {
                 foreach (var t in props)
                 {
-                    System.Diagnostics.Trace.WriteLine($"select params: {t.ToString()}");
+                    System.Diagnostics.Trace.WriteLine($"select params: {t}");
                 }
                 if (props.Count() == 1)
                 {
@@ -341,7 +310,7 @@ namespace Engine.R4B.Helpers
                     }
                 }
 
-                _result.AppendLine($" : {r.ToString()} (op: {be.Op})");
+                _result.AppendLine($" : {r} (op: {be.Op})");
                 return r;
             }
             var rFocus = expression.Focus.Accept(this);
@@ -364,7 +333,7 @@ namespace Engine.R4B.Helpers
             {
                 // _stack.Push(rFocus);
                 if (!rFocus.isRoot)
-                    _result.Append($".");
+                    _result.Append('.');
                 else
                 {
                     if (rFocus.Types.FirstOrDefault().ClassMapping?.Name == ce.ChildName)
@@ -402,9 +371,9 @@ namespace Engine.R4B.Helpers
 
                         if (childProp.Choice == ChoiceType.ResourceChoice)
                         {
-                            foreach (var rt in Hl7.Fhir.Model.ModelInfo.SupportedResources)
+                            foreach (var rt in _supportedResources)
                             {
-                                if (!Hl7.Fhir.Model.ModelInfo.IsKnownResource(rt))
+                                if (!_mi.IsKnownResource(rt))
                                     continue;
                                 var cm = _mi.FindClassMapping(rt);
                                 if (cm != null)
@@ -429,7 +398,7 @@ namespace Engine.R4B.Helpers
                                     if (ft.FullName == "Hl7.Fhir.Model.DataType" && t.ClassMapping.Name == "Extension")
                                     {
                                         // List the actual fhir types valid in extensions
-                                        foreach (var rt in Hl7.Fhir.Model.ModelInfo.OpenTypes)
+                                        foreach (var rt in _openTypes)
                                         {
                                             var cme = _mi.FindOrImportClassMapping(rt);
                                             if (cme != null)
@@ -478,20 +447,20 @@ namespace Engine.R4B.Helpers
                     {
                         Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
                         Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
-                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' not found on {rFocus.ToString()}" }
+                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' not found on {rFocus}" }
                     };
                     if (expression.Location != null)
                         issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
                     Outcome.AddIssue(issue);
                 }
                 _result.Append($"{ce.ChildName}");
-                _result.AppendLine($" : {r.ToString()}");
+                _result.AppendLine($" : {r}");
                 _stack.Pop();
                 return r;
             }
 
             if (!rFocus.isRoot)
-                _result.Append($".");
+                _result.Append('.');
             _result.Append($"{expression.FunctionName}(");
 
             if (expression.FunctionName == "select"
@@ -501,7 +470,7 @@ namespace Engine.R4B.Helpers
             }
 
 
-            incr();
+            IncrementTab();
 
             List<FhirPathVisitorProps> argTypes = new();
             foreach (var arg in expression.Arguments)
@@ -511,8 +480,8 @@ namespace Engine.R4B.Helpers
                 argTypes.Add(arg.Accept(this));
             }
 
-            decr();
-            _result.Append($")");
+            DecrementTab();
+            _result.Append(')');
 
             DeduceReturnType(expression, rFocus, argTypes, r);
 
@@ -522,7 +491,7 @@ namespace Engine.R4B.Helpers
             {
                 _stack.Pop();
             }
-            _result.AppendLine($" : {r.ToString()}");
+            _result.AppendLine($" : {r}");
 
             _stack.Pop();
             return r;
@@ -531,13 +500,13 @@ namespace Engine.R4B.Helpers
         public override FhirPathVisitorProps VisitNewNodeListInit(NewNodeListInitExpression expression)
         {
             var r = new FhirPathVisitorProps();
-            append("new NodeSet");
+            Append("new NodeSet");
             // appendType(expression);
 
-            incr();
+            IncrementTab();
             foreach (var element in expression.Contents)
                 element.Accept(this);
-            decr();
+            DecrementTab();
 
             return r;
         }
@@ -575,14 +544,14 @@ namespace Engine.R4B.Helpers
                 }
                 _result.Append("$this");
 
-                _result.AppendLine($" : {r.ToString()}");
+                _result.AppendLine($" : {r}");
                 return r;
             }
             if (variables.ContainsKey(expression.Name))
             {
                 _result.Append($"%{expression.Name}");
                 r.Types.Add(new NodeProps(variables[expression.Name]));
-                _result.AppendLine($" : {r.ToString()}");
+                _result.AppendLine($" : {r}");
                 return r;
             }
             var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
@@ -598,7 +567,7 @@ namespace Engine.R4B.Helpers
             return r;
         }
 
-        private void append(string text, bool newLine = true)
+        private void Append(string text, bool newLine = true)
         {
             if (newLine)
             {
@@ -609,12 +578,12 @@ namespace Engine.R4B.Helpers
             _result.Append(text);
         }
 
-        private void incr()
+        private void IncrementTab()
         {
             _indent += 1;
         }
 
-        private void decr()
+        private void DecrementTab()
         {
             _indent -= 1;
         }

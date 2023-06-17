@@ -1,29 +1,24 @@
-﻿using Engine.R4B.Helpers;
+﻿using Hl7.Fhir.FhirPath.Validator;
 using Hl7.Fhir.Introspection;
 using Hl7.FhirPath.Expressions;
 using Hl7.FhirPath;
 using Hl7.Fhir.Serialization;
 using Hl7.Fhir.Model;
-using Hl7.Fhir.ElementModel.Types;
-using System.Net;
-using System.Text;
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Linq;
 
 namespace Test.Fhir.FhirPath.Validator
 {
     [TestClass]
     public class BasicTests
     {
-        ModelInspector _mi = ModelInspector.ForAssembly(typeof(Patient).Assembly);
         FhirPathCompiler _compiler;
 
         [TestInitialize]
         public void Init()
         {
             Hl7.Fhir.FhirPath.ElementNavFhirExtensions.PrepareFhirSymbolTableFunctions();
-            SymbolTable symbolTable = new SymbolTable(FhirPathCompiler.DefaultSymbolTable);
+            SymbolTable symbolTable = new (FhirPathCompiler.DefaultSymbolTable);
             _compiler = new FhirPathCompiler(symbolTable);
         }
 
@@ -32,10 +27,10 @@ namespace Test.Fhir.FhirPath.Validator
         {
             string expression = "contact.telecom.where(use='phone').system";
             Console.WriteLine(expression);
-            FhirPathExpressionVisitor visitor = new FhirPathExpressionVisitor(_mi);
+            var visitor = new FhirPathExpressionVisitor();
             visitor.AddInputType(typeof(Patient));
             var pe = _compiler.Parse(expression);
-            var r = pe.Accept(visitor);
+            pe.Accept(visitor);
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success);
@@ -46,10 +41,10 @@ namespace Test.Fhir.FhirPath.Validator
         {
             string expression = "meta.extension[0].value.line[0] | deceased | contact.name[2].select(family & '' & given.join(' ') & chicken) | name.given.first()";
             Console.WriteLine(expression);
-            FhirPathExpressionVisitor visitor = new FhirPathExpressionVisitor(_mi);
+            var visitor = new FhirPathExpressionVisitor();
             visitor.AddInputType(typeof(Patient));
             var pe = _compiler.Parse(expression);
-            var r = pe.Accept(visitor);
+            pe.Accept(visitor);
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsFalse(visitor.Outcome.Success, "Expected failure");
@@ -60,10 +55,10 @@ namespace Test.Fhir.FhirPath.Validator
         {
             string expression = "contact.name[2].garbageFunc(family & '' & given.join(' ') & chicken) | name.given.first()";
             Console.WriteLine(expression);
-            FhirPathExpressionVisitor visitor = new FhirPathExpressionVisitor(_mi);
+            var visitor = new FhirPathExpressionVisitor();
             visitor.AddInputType(typeof(Patient));
             var pe = _compiler.Parse(expression);
-            var r = pe.Accept(visitor);
+            pe.Accept(visitor);
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsFalse(visitor.Outcome.Success, "Expected failure");
@@ -74,10 +69,10 @@ namespace Test.Fhir.FhirPath.Validator
         {
             string expression = "contact.name[2].select(family & '' & $this.given.join(' ')).substring(0,10)";
             Console.WriteLine(expression);
-            FhirPathExpressionVisitor visitor = new FhirPathExpressionVisitor(_mi);
+            var visitor = new FhirPathExpressionVisitor();
             visitor.AddInputType(typeof(Patient));
             var pe = _compiler.Parse(expression);
-            var r = pe.Accept(visitor);
+            pe.Accept(visitor);
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success);
@@ -88,10 +83,10 @@ namespace Test.Fhir.FhirPath.Validator
         {
             string expression = "contact.name[2] | item.item.select(item[0].item.where(linkId='i45')).text";
             Console.WriteLine(expression);
-            FhirPathExpressionVisitor visitor = new FhirPathExpressionVisitor(_mi);
+            FhirPathExpressionVisitor visitor = new ();
             visitor.AddInputType(typeof(Questionnaire));
             var pe = _compiler.Parse(expression);
-            var r = pe.Accept(visitor);
+            pe.Accept(visitor);
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success);
@@ -102,10 +97,10 @@ namespace Test.Fhir.FhirPath.Validator
         {
             string expression = "name.select($this)";
             Console.WriteLine(expression);
-            FhirPathExpressionVisitor visitor = new FhirPathExpressionVisitor(_mi);
+            var visitor = new FhirPathExpressionVisitor();
             visitor.AddInputType(typeof(Questionnaire));
             var pe = _compiler.Parse(expression);
-            var r = pe.Accept(visitor);
+            pe.Accept(visitor);
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success);
@@ -116,11 +111,11 @@ namespace Test.Fhir.FhirPath.Validator
         {
             string expression = "%surprise.family";
             Console.WriteLine(expression);
-            FhirPathExpressionVisitor visitor = new FhirPathExpressionVisitor(_mi);
+            var visitor = new FhirPathExpressionVisitor();
             visitor.AddInputType(typeof(Questionnaire));
             visitor.RegisterVariable("surprise", typeof(Hl7.Fhir.Model.HumanName));
             var pe = _compiler.Parse(expression);
-            var r = pe.Accept(visitor);
+            pe.Accept(visitor);
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success);
@@ -131,10 +126,10 @@ namespace Test.Fhir.FhirPath.Validator
         {
             string expression = "name.skip(1).first().convertsToString().select($this)";
             Console.WriteLine(expression);
-            FhirPathExpressionVisitor visitor = new FhirPathExpressionVisitor(_mi);
+            var visitor = new FhirPathExpressionVisitor();
             visitor.AddInputType(typeof(Patient));
             var pe = _compiler.Parse(expression);
-            var r = pe.Accept(visitor);
+            pe.Accept(visitor);
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success);
@@ -145,10 +140,10 @@ namespace Test.Fhir.FhirPath.Validator
         {
             string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
             Console.WriteLine(expression);
-            FhirPathExpressionVisitor visitor = new FhirPathExpressionVisitor(_mi);
+            var visitor = new FhirPathExpressionVisitor();
             visitor.AddInputType(typeof(CapabilityStatement));
             var pe = _compiler.Parse(expression);
-            var r = pe.Accept(visitor);
+            pe.Accept(visitor);
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success);

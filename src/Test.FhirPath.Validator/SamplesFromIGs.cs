@@ -1,12 +1,9 @@
-﻿using Engine.R4B.Helpers;
+﻿using Hl7.Fhir.FhirPath.Validator;
 using Hl7.Fhir.Introspection;
 using Hl7.FhirPath.Expressions;
 using Hl7.FhirPath;
 using Hl7.Fhir.Serialization;
 using Hl7.Fhir.Model;
-using Hl7.Fhir.ElementModel.Types;
-using System.Net;
-using System.Text;
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
@@ -16,14 +13,14 @@ namespace Test.Fhir.FhirPath.Validator
     [TestClass]
     public class SamplesFromIGs
     {
-        ModelInspector _mi = ModelInspector.ForAssembly(typeof(Patient).Assembly);
+        private readonly ModelInspector _mi = ModelInspector.ForAssembly(typeof(Patient).Assembly);
         FhirPathCompiler _compiler;
 
         [TestInitialize]
         public void Init()
         {
             Hl7.Fhir.FhirPath.ElementNavFhirExtensions.PrepareFhirSymbolTableFunctions();
-            SymbolTable symbolTable = new SymbolTable(FhirPathCompiler.DefaultSymbolTable);
+            SymbolTable symbolTable = new (FhirPathCompiler.DefaultSymbolTable);
             _compiler = new FhirPathCompiler(symbolTable);
         }
 
@@ -832,10 +829,12 @@ namespace Test.Fhir.FhirPath.Validator
         public void VerifyExpression(string type, string key, string expression, bool expectSuccess)
         {
             // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
-            Console.WriteLine(expression);
-            FhirPathExpressionVisitor visitor = new FhirPathExpressionVisitor(_mi);
-            var t = ModelInfo.GetTypeForFhirType(type);
-            t = SelectType(type, out var rt);
+            Console.WriteLine($"Context: {type}");
+            Console.WriteLine($"Invariant key: {key}");
+            Console.WriteLine($"Expression:\r\n{expression}");
+            Console.WriteLine("---------");
+            var visitor = new FhirPathExpressionVisitor();
+            var t = SelectType(type, out var rt);
             if (t != rt)
             {
             }
@@ -847,7 +846,7 @@ namespace Test.Fhir.FhirPath.Validator
             else
                 visitor.RegisterVariable("resource", typeof(Resource));
             var pe = _compiler.Parse(expression);
-            var r = pe.Accept(visitor);
+            pe.Accept(visitor);
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success == expectSuccess);
@@ -856,7 +855,7 @@ namespace Test.Fhir.FhirPath.Validator
         public Type? SelectType(string path, out Type? rootType)
         {
             string type = path;
-            if (path.Contains("."))
+            if (path.Contains('.'))
             {
                 type = path.Substring(0, path.IndexOf("."));
                 path = path.Substring(path.IndexOf(".") + 1);

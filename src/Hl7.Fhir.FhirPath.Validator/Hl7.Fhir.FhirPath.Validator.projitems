@@ -9,6 +9,8 @@
     <Import_RootNamespace>Hl7.Fhir.FhirPath.Validator</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)FhirPathVisitor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)NodeProps.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FhirPathVisitorProps.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FhirPathExpressionVisitor.cs" />
   </ItemGroup>
 </Project>
