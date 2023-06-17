@@ -1,0 +1,61 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31612.314
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5CE27248-3050-4DA7-967A-A8CD757BBAF5}"
+	ProjectSection(SolutionItems) = preProject
+		..\contributors.md = ..\contributors.md
+		fhir-net-web-api.props = fhir-net-web-api.props
+		..\LICENSE = ..\LICENSE
+		platforms.props = platforms.props
+		..\pull_request_template.md = ..\pull_request_template.md
+		..\readme.md = ..\readme.md
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Fhir.R4B.FhirPath.Validator", "Test.FhirPath.Validator\Test.Fhir.R4B.FhirPath.Validator.csproj", "{ED8F6692-A85A-49B8-A7CF-44B45ADAF72F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hl7.Fhir.R4B.FhirPath.Validator", "Hl7.Fhir.R4B.FhirPath.Validator\Hl7.Fhir.R4B.FhirPath.Validator.csproj", "{1752B9AD-8F42-4A19-88A5-BD1F68C98228}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Hl7.Fhir.FhirPath.Validator", "Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.shproj", "{0A985D02-91B3-4D2F-95A0-FCD8BF8635B1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hl7.Fhir.R4.FhirPath.Validator", "Hl7.Fhir.R4.FhirPath.Validator\Hl7.Fhir.R4.FhirPath.Validator.csproj", "{795E0267-9CB2-46E4-B2A7-F9AE3D7661CE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hl7.Fhir.R5.FhirPath.Validator", "Hl7.Fhir.R5.FhirPath.Validator\Hl7.Fhir.R5.FhirPath.Validator.csproj", "{78A22D9D-AA52-4466-9DCE-3FCA8BA67F7C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ED8F6692-A85A-49B8-A7CF-44B45ADAF72F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED8F6692-A85A-49B8-A7CF-44B45ADAF72F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED8F6692-A85A-49B8-A7CF-44B45ADAF72F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED8F6692-A85A-49B8-A7CF-44B45ADAF72F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1752B9AD-8F42-4A19-88A5-BD1F68C98228}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1752B9AD-8F42-4A19-88A5-BD1F68C98228}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1752B9AD-8F42-4A19-88A5-BD1F68C98228}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1752B9AD-8F42-4A19-88A5-BD1F68C98228}.Release|Any CPU.Build.0 = Release|Any CPU
+		{795E0267-9CB2-46E4-B2A7-F9AE3D7661CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{795E0267-9CB2-46E4-B2A7-F9AE3D7661CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{795E0267-9CB2-46E4-B2A7-F9AE3D7661CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{795E0267-9CB2-46E4-B2A7-F9AE3D7661CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78A22D9D-AA52-4466-9DCE-3FCA8BA67F7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78A22D9D-AA52-4466-9DCE-3FCA8BA67F7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78A22D9D-AA52-4466-9DCE-3FCA8BA67F7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78A22D9D-AA52-4466-9DCE-3FCA8BA67F7C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F1474921-5D08-49DD-81D2-E85293369801}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.projitems*{0a985d02-91b3-4d2f-95a0-fcd8bf8635b1}*SharedItemsImports = 13
+		Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.projitems*{1752b9ad-8f42-4a19-88a5-bd1f68c98228}*SharedItemsImports = 5
+		Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.projitems*{78a22d9d-aa52-4466-9dce-3fca8ba67f7c}*SharedItemsImports = 5
+		Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.projitems*{795e0267-9cb2-46e4-b2a7-f9ae3d7661ce}*SharedItemsImports = 5
+	EndGlobalSection
+EndGlobal
