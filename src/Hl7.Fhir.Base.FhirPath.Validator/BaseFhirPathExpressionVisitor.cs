@@ -111,7 +111,6 @@ namespace Hl7.Fhir.FhirPath.Validator
             "supersetOf",
             // FHIR extensions to fhirpath
             "hasValue",
-            "ofType",
             "conformsTo",
             "memberOf",
             "subsumes",
@@ -168,7 +167,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                 foreach (var t in focus.Types)
                     outputProps.Types.Add(t);
             }
-            else if (function.FunctionName == "as")
+            else if (function.FunctionName == "as" || function.FunctionName == "ofType")
             {
                 // Check this before the boolfuncs tests
                 var isTypeArg = function.Arguments.First();

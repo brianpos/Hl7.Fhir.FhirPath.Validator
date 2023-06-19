@@ -23,6 +23,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hl7.Fhir.R5.FhirPath.Valida
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hl7.Fhir.Base.FhirPath.Validator", "Hl7.Fhir.Base.FhirPath.Validator\Hl7.Fhir.Base.FhirPath.Validator.csproj", "{FA8190E7-5E0A-420A-85AC-50FF3C36DF3B}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Fhir.R5.FhirPath.Validator", "Test.Fhir.R5.FhirPath.Validator\Test.Fhir.R5.FhirPath.Validator.csproj", "{55EBC57C-ED84-4174-A529-1352E056FEAB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -49,6 +51,10 @@ Global
 		{FA8190E7-5E0A-420A-85AC-50FF3C36DF3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FA8190E7-5E0A-420A-85AC-50FF3C36DF3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FA8190E7-5E0A-420A-85AC-50FF3C36DF3B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{55EBC57C-ED84-4174-A529-1352E056FEAB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55EBC57C-ED84-4174-A529-1352E056FEAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55EBC57C-ED84-4174-A529-1352E056FEAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55EBC57C-ED84-4174-A529-1352E056FEAB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
