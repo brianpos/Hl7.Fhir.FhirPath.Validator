@@ -106,7 +106,7 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success, "Expected failure");
-            Assert.AreEqual("Quantity, Age", r.ToString());
+            Assert.AreEqual("Quantity, SampledData", r.ToString());
         }
 
         [TestMethod]
