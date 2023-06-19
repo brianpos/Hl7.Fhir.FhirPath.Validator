@@ -17,8 +17,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Fhir.R4B.FhirPath.Vali
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hl7.Fhir.R4B.FhirPath.Validator", "Hl7.Fhir.R4B.FhirPath.Validator\Hl7.Fhir.R4B.FhirPath.Validator.csproj", "{1752B9AD-8F42-4A19-88A5-BD1F68C98228}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Hl7.Fhir.FhirPath.Validator", "Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.shproj", "{0A985D02-91B3-4D2F-95A0-FCD8BF8635B1}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hl7.Fhir.R4.FhirPath.Validator", "Hl7.Fhir.R4.FhirPath.Validator\Hl7.Fhir.R4.FhirPath.Validator.csproj", "{795E0267-9CB2-46E4-B2A7-F9AE3D7661CE}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hl7.Fhir.R5.FhirPath.Validator", "Hl7.Fhir.R5.FhirPath.Validator\Hl7.Fhir.R5.FhirPath.Validator.csproj", "{78A22D9D-AA52-4466-9DCE-3FCA8BA67F7C}"
@@ -57,12 +55,5 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F1474921-5D08-49DD-81D2-E85293369801}
-	EndGlobalSection
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.projitems*{0a985d02-91b3-4d2f-95a0-fcd8bf8635b1}*SharedItemsImports = 13
-		Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.projitems*{1752b9ad-8f42-4a19-88a5-bd1f68c98228}*SharedItemsImports = 5
-		Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.projitems*{78a22d9d-aa52-4466-9dce-3fca8ba67f7c}*SharedItemsImports = 5
-		Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.projitems*{795e0267-9cb2-46e4-b2a7-f9ae3d7661ce}*SharedItemsImports = 5
-		Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.projitems*{fa8190e7-5e0a-420a-85ac-50ff3c36df3b}*SharedItemsImports = 5
 	EndGlobalSection
 EndGlobal

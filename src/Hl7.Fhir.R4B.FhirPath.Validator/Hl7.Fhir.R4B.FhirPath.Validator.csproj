@@ -19,12 +19,14 @@
   </PropertyGroup>
 
   <Import Project="..\platforms.props" />
-
-  <Import Project="..\Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.projitems" Label="Shared" />
   <Import Project="..\fhir-net-web-api.props" />
 
   <ItemGroup>
     <PackageReference Include="Hl7.Fhir.R4B" Version="5.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hl7.Fhir.Base.FhirPath.Validator\Hl7.Fhir.Base.FhirPath.Validator.csproj" />
   </ItemGroup>
 
   <ItemGroup>

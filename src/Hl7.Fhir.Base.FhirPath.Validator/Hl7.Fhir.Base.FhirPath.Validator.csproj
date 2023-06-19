@@ -19,8 +19,6 @@
   </PropertyGroup>
 
   <Import Project="..\platforms.props" />
-
-  <Import Project="..\Hl7.Fhir.FhirPath.Validator\Hl7.Fhir.FhirPath.Validator.projitems" Label="Shared" />
   <Import Project="..\fhir-net-web-api.props" />
 
   <ItemGroup>
