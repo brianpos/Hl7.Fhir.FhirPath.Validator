@@ -5,12 +5,12 @@
     <AssemblyName>Hl7.Fhir.R4B.FhirPath.Validator</AssemblyName>
     <PackageId>brianpos.Fhir.R4B.FhirPath.Validator</PackageId>
     <Version>5.2.0-beta1</Version>
-    <Title>HL7 Fhir WebApi Interfaces</Title>
-    <Summary>Class interfaces for the FHIR WebApi Models</Summary>
-    <Description>This library contains the interface definitions that an implementation should use to create the storage layer for a FHIR server using the FHIR WebApi Facade</Description>
-    <PackageTags>HL7;FHIR;FHIR;NetCore;WebAPI</PackageTags>
-    <Product>Hl7.Fhir.R4B.FhirPath.Validator</Product>
-    <RootNamespace>Hl7.Fhir.WebApi</RootNamespace>
+    <Title>HL7 Fhir FhirPath Static Validator (R4B)</Title>
+    <Summary>Static Analysis tool to validate fhirpath expressions against the fhir R4B specification</Summary>
+    <Description>Wraps the base static analysis tool to default in the R4B version of the class models for validation</Description>
+    <PackageTags>HL7;FHIR;FHIRPath;NetCore;</PackageTags>
+    <Product>Hl7.Fhir.FhirPath.Validator</Product>
+    <RootNamespace>Hl7.Fhir.FhirPath.Validator</RootNamespace>
 
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>

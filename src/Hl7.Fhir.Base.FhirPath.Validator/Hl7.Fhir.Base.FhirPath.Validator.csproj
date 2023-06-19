@@ -5,12 +5,15 @@
     <AssemblyName>Hl7.Fhir.Base.FhirPath.Validator</AssemblyName>
     <PackageId>brianpos.Fhir.Base.FhirPath.Validator</PackageId>
     <Version>5.2.0-beta1</Version>
-    <Title>HL7 Fhir WebApi Interfaces</Title>
-    <Summary>Class interfaces for the FHIR WebApi Models</Summary>
-    <Description>This library contains the interface definitions that an implementation should use to create the storage layer for a FHIR server using the FHIR WebApi Facade</Description>
-    <PackageTags>HL7;FHIR;FHIR;NetCore;WebAPI</PackageTags>
-    <Product>Hl7.Fhir.R5.FhirPath.Validator</Product>
-    <RootNamespace>Hl7.Fhir.WebApi</RootNamespace>
+    <Title>HL7 Fhir FhirPath Static Validator (base)</Title>
+    <Summary>Static Analysis tool to validate fhirpath expressions against a specific version of the fhir specification</Summary>
+    <Description>
+      The static analsys validator uses the visitor pattern over a fhirpath expression after it has been parsed by the Firely FhirPath compilation process. 
+      The validation will return an OperationOutcome that can be used in other error reporting locations.
+    </Description>
+    <PackageTags>HL7;FHIR;FHIRPath;NetCore;</PackageTags>
+    <Product>Hl7.Fhir.FhirPath.Validator</Product>
+    <RootNamespace>Hl7.Fhir.FhirPath.Validator</RootNamespace>
 
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
