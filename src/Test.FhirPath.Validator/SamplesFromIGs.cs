@@ -846,7 +846,10 @@ namespace Test.Fhir.FhirPath.Validator
             else
                 visitor.RegisterVariable("resource", typeof(Resource));
             var pe = _compiler.Parse(expression);
-            pe.Accept(visitor);
+            var r = pe.Accept(visitor);
+            Console.WriteLine($"Result: {r}");
+            Console.WriteLine("---------");
+
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success == expectSuccess);

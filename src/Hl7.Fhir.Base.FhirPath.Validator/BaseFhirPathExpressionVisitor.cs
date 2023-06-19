@@ -168,6 +168,41 @@ namespace Hl7.Fhir.FhirPath.Validator
                 foreach (var t in focus.Types)
                     outputProps.Types.Add(t);
             }
+            else if (function.FunctionName == "as")
+            {
+                // Check this before the boolfuncs tests
+                var isTypeArg = function.Arguments.First();
+                FhirPathVisitorProps isType = isTypeArg.Accept(this);
+                // Check if the type possibly COULD be evaluated as true
+                if (isTypeArg is ConstantExpression ceTa)
+                {
+                    // ceTa.Value
+                    var isTypeToCheck = _mi.GetTypeForFhirType(ceTa.Value as string);
+                    var possibleTypeNames = focus.Types.Select(t => t.ClassMapping.Name);
+                    var validResultTypes = focus.Types.Where(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck));
+                    if (!validResultTypes.Any())
+                    {
+                        System.Diagnostics.Trace.WriteLine($"Expression included an 'as' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}");
+                        var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                        {
+                            Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                            Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
+                            Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an 'as' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
+                        };
+                        if (function.Location != null)
+                            issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+                        Outcome.AddIssue(issue);
+                    }
+                    else
+                    {
+                        // filter down to the types listed
+                        foreach (var rt in validResultTypes)
+                        {
+                            outputProps.Types.Add(rt);
+                        }
+                    }
+                }
+            }
             // TODO: Also include ofType special case handling to look for possible warnings
             else if (boolFuncs.Contains(function.FunctionName))
                 outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.FhirBoolean));
@@ -290,6 +325,57 @@ namespace Hl7.Fhir.FhirPath.Validator
                     // TODO:
                     r.AddType(_mi, typeof(Hl7.Fhir.Model.FhirBoolean));
                 }
+                else if (be.Op == "as")
+                {
+                    FhirPathVisitorProps focus = expression.Arguments.First().Accept(this);
+                    var isTypeArg = expression.Arguments.Skip(1).First();
+                    FhirPathVisitorProps isType = isTypeArg.Accept(this);
+                    // Check if the type possibly COULD be evaluated as true
+                    if (isTypeArg is ConstantExpression ceTa)
+                    {
+                        // ceTa.Value
+                        var isTypeToCheck = _mi.GetTypeForFhirType(ceTa.Value as string);
+                        var possibleTypeNames = focus.Types.Select(t => t.ClassMapping.Name);
+                        var validResultTypes = focus.Types.Where(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck));
+                        if (!validResultTypes.Any())
+                        {
+                            System.Diagnostics.Trace.WriteLine($"Expression included an 'as' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}");
+                            var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                            {
+                                Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                                Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
+                                Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an 'as' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
+                            };
+                            if (be.Location != null)
+                                issue.Location = new[] { $"Line {be.Location.LineNumber}, Position {be.Location.LineNumber}" };
+                            Outcome.AddIssue(issue);
+                        }
+                        else
+                        {
+                            // filter down to the types listed
+                            foreach (var rt in validResultTypes)
+                            {
+                                r.Types.Add(rt);
+                            }
+                        }
+                    }
+                }
+                else if (be.Op == "|")
+                {
+                    IncrementTab();
+                    FhirPathVisitorProps first = null;
+                    foreach (var arg in expression.Arguments)
+                    {
+                        if (first != null)
+                            _result.Append($" {be.Op} ");
+                        first = arg.Accept(this);
+                        foreach (var t in first.Types)
+                            r.Types.Add(t);
+                    }
+                    _result.AppendLine($" : {r} (op: {be.Op})");
+                    DecrementTab();
+                    return r;
+                }
                 else
                 {
                     FhirPathVisitorProps first = null;
@@ -340,6 +426,17 @@ namespace Hl7.Fhir.FhirPath.Validator
                     {
                         r.Types.Add(rFocus.Types.FirstOrDefault());
                         return r;
+                    }
+                    else
+                    {
+                        // This is a workaround for search parameters
+                        // where they merge multiple resource types into
+                        // the same expression.
+                        if (_mi.IsKnownResource(ce.ChildName))
+                        {
+                            r.AddType(_mi, _mi.GetTypeForFhirType(ce.ChildName));
+                            return r;
+                        }
                     }
                 }
                 bool propFound = false;

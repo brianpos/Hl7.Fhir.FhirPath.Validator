@@ -65,6 +65,51 @@ namespace Test.Fhir.FhirPath.Validator
         }
 
         [TestMethod]
+        public void TestAsFunction()
+        {
+            string expression = "(name as HumanName).given";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(Patient));
+            var pe = _compiler.Parse(expression);
+            var r = pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsTrue(visitor.Outcome.Success, "Expected failure");
+            Assert.AreEqual("string[]", r.ToString());
+        }
+
+        [TestMethod]
+        public void TestAsOperator()
+        {
+            string expression = "Condition.abatement.as(Age)";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(Condition));
+            var pe = _compiler.Parse(expression);
+            var r = pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsTrue(visitor.Outcome.Success, "Expected failure");
+            Assert.AreEqual("Age", r.ToString());
+        }
+
+        [TestMethod]
+        public void TestAsOperatorMultiple()
+        {
+            string expression = "(value as Quantity) | (value as SampledData)";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(Observation));
+            var pe = _compiler.Parse(expression);
+            var r = pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsTrue(visitor.Outcome.Success, "Expected failure");
+            Assert.AreEqual("Quantity, Age", r.ToString());
+        }
+
+        [TestMethod]
         public void TestMethodSelect()
         {
             string expression = "contact.name[2].select(family & '' & $this.given.join(' ')).substring(0,10)";
