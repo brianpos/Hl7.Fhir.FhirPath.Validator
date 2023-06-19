@@ -12,13 +12,13 @@ using System.Text;
 
 namespace Hl7.Fhir.FhirPath.Validator
 {
-    public partial class FhirPathExpressionVisitor
+    public class FhirPathExpressionVisitor : BaseFhirPathExpressionVisitor
     {
         public FhirPathExpressionVisitor()
+            : base(ModelInspector.ForAssembly(typeof(Patient).Assembly),
+                  Hl7.Fhir.Model.ModelInfo.SupportedResources,
+                  Hl7.Fhir.Model.ModelInfo.OpenTypes)
         {
-            _mi = ModelInspector.ForAssembly(typeof(Patient).Assembly);
-            _supportedResources = Hl7.Fhir.Model.ModelInfo.SupportedResources;
-            _openTypes = Hl7.Fhir.Model.ModelInfo.OpenTypes;
         }
     }
 }

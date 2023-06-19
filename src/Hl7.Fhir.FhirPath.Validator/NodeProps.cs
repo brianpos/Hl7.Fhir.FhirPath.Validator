@@ -1,4 +1,5 @@
 ﻿using Hl7.Fhir.Introspection;
+using Hl7.Fhir.Rest;
 using Hl7.Fhir.Support;
 using Hl7.Fhir.Utility;
 using Hl7.FhirPath.Expressions;

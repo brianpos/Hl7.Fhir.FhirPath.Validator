@@ -11,6 +11,6 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)NodeProps.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FhirPathVisitorProps.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)FhirPathExpressionVisitor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BaseFhirPathExpressionVisitor.cs" />
   </ItemGroup>
 </Project>

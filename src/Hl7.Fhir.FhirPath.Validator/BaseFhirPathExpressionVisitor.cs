@@ -11,9 +11,9 @@ using System.Text;
 
 namespace Hl7.Fhir.FhirPath.Validator
 {
-    public partial class FhirPathExpressionVisitor : ExpressionVisitor<FhirPathVisitorProps>
+    public class BaseFhirPathExpressionVisitor : ExpressionVisitor<FhirPathVisitorProps>
     {
-        public FhirPathExpressionVisitor(ModelInspector mi, List<string> SupportedResources, Type[] OpenTypes)
+        public BaseFhirPathExpressionVisitor(ModelInspector mi, List<string> SupportedResources, Type[] OpenTypes)
         {
             _mi = mi;
             _supportedResources = SupportedResources;
