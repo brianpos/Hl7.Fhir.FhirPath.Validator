@@ -85,7 +85,7 @@ namespace Test.Fhir.FhirPath.Validator
                 foreach (var item in source.ListSummaries().Where(s => s.ResourceTypeName == "StructureDefinition"))
                 {
                     var sd = source.ResolveByUri(item.ResourceUri) as StructureDefinition;
-                    if (sd != null && sd.Kind == StructureDefinition.StructureDefinitionKind.Resource)
+                    if (sd != null && sd.Kind == StructureDefinition.StructureDefinitionKind.Resource && sd.Abstract == false)
                     {
                         var elements = sd.Differential.Element.Where(e => e.Constraint.Any()).ToList();
                         if (elements.Any())
