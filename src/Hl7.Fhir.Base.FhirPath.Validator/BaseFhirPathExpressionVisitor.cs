@@ -31,6 +31,7 @@ namespace Hl7.Fhir.FhirPath.Validator
         public Hl7.Fhir.Model.OperationOutcome Outcome { get; } = new Hl7.Fhir.Model.OperationOutcome();
 
         private readonly Stack<FhirPathVisitorProps> _stack = new();
+        private readonly Stack<FhirPathVisitorProps> _stackThis = new();
         private readonly StringBuilder _result = new();
         private int _indent = 0;
 
@@ -151,6 +152,18 @@ namespace Hl7.Fhir.FhirPath.Validator
             "binary.&",
             "replaceMatches",
             "replace",
+        }.ToArray();
+
+        private readonly string[] expressionFuncs = new[]
+        {
+            "exists",
+            "all",
+            "select",
+            "where",
+            "repeat",
+            "iif",
+            "trace",
+            "aggregate",
         }.ToArray();
 
         private readonly string[] passthroughFuncs = new[]
@@ -584,7 +597,11 @@ namespace Hl7.Fhir.FhirPath.Validator
             {
                 _stack.Push(rFocus);
             }
-
+            
+            if (expressionFuncs.Contains(expression.FunctionName))
+            {
+                _stackThis.Push(rFocus);
+            }
 
             IncrementTab();
 
@@ -607,6 +624,11 @@ namespace Hl7.Fhir.FhirPath.Validator
             {
                 _stack.Pop();
             }
+            if (expressionFuncs.Contains(expression.FunctionName))
+            {
+                _stackThis.Pop();
+            }
+
             _result.AppendLine($" : {r}");
 
             _stack.Pop();
@@ -648,9 +670,9 @@ namespace Hl7.Fhir.FhirPath.Validator
             }
             if (expression.Name == "builtin.this")
             {
-                if (_stack.Any())
+                if (_stackThis.Any())
                 {
-                    foreach (var t in _stack.Peek().Types)
+                    foreach (var t in _stackThis.Peek().Types)
                         r.Types.Add(t);
                 }
                 else
