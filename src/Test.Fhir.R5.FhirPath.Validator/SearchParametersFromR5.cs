@@ -43,6 +43,17 @@ namespace Test.Fhir.FhirPath.Validator
                     "http://hl7.org/fhir/SearchParameter/MedicinalProductDefinition-characteristic",
                     "http://hl7.org/fhir/SearchParameter/Observation-combo-value-quantity",
 
+                    // Bad composites
+                    "http://hl7.org/fhir/SearchParameter/Device-code-value-concept",
+                    "http://hl7.org/fhir/SearchParameter/DeviceDefinition-specification-version",
+                    "http://hl7.org/fhir/SearchParameter/DocumentReference-relationship",
+                    "http://hl7.org/fhir/SearchParameter/Encounter-location-period",
+                    "http://hl7.org/fhir/SearchParameter/Ingredient-strength-concentration-ratio",
+                    "http://hl7.org/fhir/SearchParameter/Ingredient-strength-presentation-ratio",
+                    "http://hl7.org/fhir/SearchParameter/Observation-code-value-string",
+                    "http://hl7.org/fhir/SearchParameter/TestScript-scope-artifact-conformance",
+                    "http://hl7.org/fhir/SearchParameter/TestScript-scope-artifact-phase",
+
                     // this one isn't really bad, we don't resolve the extension to discover if the value is restricted
                     "http://hl7.org/fhir/SearchParameter/CareTeam-name", 
                 };
@@ -73,7 +84,8 @@ namespace Test.Fhir.FhirPath.Validator
                             spd.Type,
                             expectedOutcomeResult,
                             expectedResult,
-                            spd.Url
+                            spd.Url,
+                            spd
                         });
                     }
                 }
@@ -83,7 +95,7 @@ namespace Test.Fhir.FhirPath.Validator
 
         [TestMethod]
         [DynamicData(nameof(R4Expressions))]
-        public void R4Expr(string type, string key, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, string url)
+        public void R4Expr(string type, string key, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, string url, ModelInfo.SearchParamDefinition spd)
         {
             // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
             Console.WriteLine($"Context: {type}");
@@ -100,10 +112,15 @@ namespace Test.Fhir.FhirPath.Validator
             if (t != null)
                 visitor.RegisterVariable("context", t);
             visitor.AddInputType(t);
-            if (rt.IsAssignableTo(typeof(Resource)))
+
+            if (!rt.IsAssignableTo(typeof(Resource)))
+                rt = typeof(Resource);
                 visitor.RegisterVariable("resource", rt);
-            else
-                visitor.RegisterVariable("resource", typeof(Resource));
+            VerifyExpression(rt, expression, searchType, expectSuccessOutcome, expectValidSearch, spd, visitor);
+        }
+
+        private void VerifyExpression(Type resourceType, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, ModelInfo.SearchParamDefinition spd, FhirPathExpressionVisitor visitor)
+        {
             var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
             Console.WriteLine($"Result: {r}");
@@ -112,6 +129,7 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success == expectSuccessOutcome);
+
             if (expectValidSearch)
             {
                 Assert.IsTrue(r.ToString().Length > 0);
@@ -141,7 +159,29 @@ namespace Test.Fhir.FhirPath.Validator
                             Assert.IsTrue(UriTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
                             break;
                         case SearchParamType.Composite:
-                            // Assert.Inconclusive($"Need to verify search {searchType} type on {returnType}");
+                            // Need to feed this back into itself to verify
+                            foreach (var cp in spd.Component)
+                            {
+                                // resolve the composite canonical to work out what type it should be
+                                var componentSearchParameterType = ModelInfo.SearchParameters.Where(sp => sp.Url == cp.Definition).FirstOrDefault()?.Type;
+                                Assert.IsNotNull(componentSearchParameterType, $"Failed to resolve component URL: {cp.Definition}");
+                                foreach (var type in r.Types)
+                                {
+                                    var visitorComponent = new FhirPathExpressionVisitor();
+                                    visitorComponent.RegisterVariable("resource", resourceType);
+                                    visitorComponent.RegisterVariable("context", type.ClassMapping);
+                                    visitorComponent.AddInputType(type.ClassMapping);
+
+                                    VerifyExpression(
+                                        resourceType,
+                                        cp.Expression,
+                                        componentSearchParameterType.Value,
+                                        expectSuccessOutcome,
+                                        expectValidSearch,
+                                        null,
+                                        visitorComponent);
+                                }
+                            }
                             break;
                         case SearchParamType.Special:
                             // No real way to verify this special type

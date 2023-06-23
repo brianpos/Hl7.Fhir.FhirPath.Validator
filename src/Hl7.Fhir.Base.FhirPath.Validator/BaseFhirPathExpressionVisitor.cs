@@ -42,6 +42,13 @@ namespace Hl7.Fhir.FhirPath.Validator
                 variables.Add(name, cm);
             }
         }
+        public void RegisterVariable(string name, ClassMapping cm)
+        {
+            if (cm != null && !variables.ContainsKey(name))
+            {
+                variables.Add(name, cm);
+            }
+        }
         private readonly Dictionary<string, ClassMapping> variables = new();
 
         public override string ToString()
@@ -53,7 +60,15 @@ namespace Hl7.Fhir.FhirPath.Validator
         public void AddInputType(Type t)
         {
             var cm = _mi.FindOrImportClassMapping(t);
-            if (cm != null)
+            if (cm != null && !_inputTypes.Contains(cm))
+            {
+                _inputTypes.Add(cm);
+            }
+        }
+
+        public void AddInputType(ClassMapping cm)
+        {
+            if (!_inputTypes.Contains(cm))
             {
                 _inputTypes.Add(cm);
             }

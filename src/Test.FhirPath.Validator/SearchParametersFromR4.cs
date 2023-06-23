@@ -30,18 +30,51 @@ namespace Test.Fhir.FhirPath.Validator
         {
             get
             {
+                var knownBadSearchParams = new[] {
+                    "http://hl7.org/fhir/SearchParameter/clinical-date",
+                    "http://hl7.org/fhir/SearchParameter/CarePlan-activity-date",
+                    "http://hl7.org/fhir/SearchParameter/MedicinalProductDefinition-characteristic",
+                    "http://hl7.org/fhir/SearchParameter/ClinicalUseDefinition-contraindication",
+                    "http://hl7.org/fhir/SearchParameter/ClinicalUseDefinition-contraindication-reference",
+                    "http://hl7.org/fhir/SearchParameter/ClinicalUseDefinition-effect",
+                    "http://hl7.org/fhir/SearchParameter/ClinicalUseDefinition-effect-reference",
+                    "http://hl7.org/fhir/SearchParameter/ClinicalUseDefinition-indication",
+                    "http://hl7.org/fhir/SearchParameter/ClinicalUseDefinition-indication-reference",
+                    "http://hl7.org/fhir/SearchParameter/Consent-source-reference",
+                    "http://hl7.org/fhir/SearchParameter/DocumentReference-relationship",
+                    "http://hl7.org/fhir/SearchParameter/Ingredient-manufacturer",
+                    "http://hl7.org/fhir/SearchParameter/Observation-combo-value-quantity",
+                    "http://hl7.org/fhir/SearchParameter/Observation-component-value-quantity",
+                    "http://hl7.org/fhir/SearchParameter/Observation-value-quantity",
+                    "http://hl7.org/fhir/SearchParameter/RiskAssessment-probability",
+                };
                 var result = new List<object[]>();
                 foreach (var spd in ModelInfo.SearchParameters)
                 {
                     if (!string.IsNullOrEmpty(spd.Expression))
+                    {
+                        bool expectedOutcomeResult = true;
+                        bool expectedResult = true;
+
+                        // Workaround for the Appointment search parameter fragments that don't prefix their resource type
+                        // which then fails if you try to perform static analysis on other resource types
+                        if (spd.Url == "http://hl7.org/fhir/SearchParameter/clinical-date")
+                            spd.Expression = "AllergyIntolerance.recordedDate | CarePlan.period | CareTeam.period | ClinicalImpression.date | Composition.date | Consent.dateTime | DiagnosticReport.effective | Encounter.period | EpisodeOfCare.period | FamilyMemberHistory.date | Flag.period | (Immunization.occurrence as dateTime) | List.date | Observation.effective | Procedure.performed | (RiskAssessment.occurrence as dateTime) | SupplyRequest.authoredOn";
+
+                        if (knownBadSearchParams.Contains(spd.Url))
+                            expectedResult = false;
+
                         result.Add(new object[] {
                             spd.Resource,
                             spd.Name,
                             spd.Expression,
                             spd.Type,
-                            true,
-                            spd.Url
+                            expectedOutcomeResult,
+                            expectedResult,
+                            spd.Url,
+                            spd
                         });
+                    }
                 }
                 return result;
             }
@@ -49,7 +82,7 @@ namespace Test.Fhir.FhirPath.Validator
 
         [TestMethod]
         [DynamicData(nameof(R4Expressions))]
-        public void R4Expr(string type, string key, string expression, SearchParamType searchType, bool expectSuccess, string url)
+        public void R4Expr(string type, string key, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, string url, ModelInfo.SearchParamDefinition spd)
         {
             // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
             Console.WriteLine($"Context: {type}");
@@ -66,10 +99,14 @@ namespace Test.Fhir.FhirPath.Validator
             if (t != null)
                 visitor.RegisterVariable("context", t);
             visitor.AddInputType(t);
-            if (rt.IsAssignableTo(typeof(Resource)))
-                visitor.RegisterVariable("resource", rt);
-            else
-                visitor.RegisterVariable("resource", typeof(Resource));
+            if (!rt.IsAssignableTo(typeof(Resource)))
+                rt = typeof(Resource);
+            visitor.RegisterVariable("resource", rt);
+            VerifyExpression(rt, expression, searchType, expectSuccessOutcome, expectValidSearch, spd, visitor);
+        }
+
+        private void VerifyExpression(Type resourceType, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, ModelInfo.SearchParamDefinition spd, FhirPathExpressionVisitor visitor)
+        {
             var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
             Console.WriteLine($"Result: {r}");
@@ -77,40 +114,65 @@ namespace Test.Fhir.FhirPath.Validator
 
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
-            Assert.IsTrue(visitor.Outcome.Success == expectSuccess);
-            Assert.IsTrue(r.ToString().Length > 0);
-            foreach (var returnType in r.ToString().Replace("[]", "").Split(", "))
+            Assert.IsTrue(visitor.Outcome.Success == expectSuccessOutcome);
+
+            if (expectValidSearch)
             {
-                switch (searchType)
+                Assert.IsTrue(r.ToString().Length > 0);
+                foreach (var returnType in r.ToString().Replace("[]", "").Split(", "))
                 {
-                    case SearchParamType.Number:
-                        Assert.IsTrue(NumberTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
-                        break;
-                    case SearchParamType.Date:
-                        Assert.IsTrue(DateTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
-                        break;
-                    case SearchParamType.String:
-                        Assert.IsTrue(StringTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
-                        break;
-                    case SearchParamType.Token:
-                        Assert.IsTrue(TokenTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
-                        break;
-                    case SearchParamType.Reference:
-                        Assert.IsTrue(ReferenceTypes.Contains(returnType) || _mi.IsKnownResource(returnType), $"Search Type mismatch {searchType} type on {returnType}");
-                        break;
-                    case SearchParamType.Quantity:
-                        Assert.IsTrue(QuantityTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
-                        break;
-                    case SearchParamType.Uri:
-                        Assert.IsTrue(UriTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
-                        break;
-                    case SearchParamType.Composite:
-                        // Assert.Inconclusive($"Need to verify search {searchType} type on {returnType}");
-                        break;
-                    case SearchParamType.Special:
-                        // No real way to verify this special type
-                        // Assert.Inconclusive($"Need to verify search {searchType} type on {returnType}");
-                        break;
+                    switch (searchType)
+                    {
+                        case SearchParamType.Number:
+                            Assert.IsTrue(NumberTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
+                            break;
+                        case SearchParamType.Date:
+                            Assert.IsTrue(DateTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
+                            break;
+                        case SearchParamType.String:
+                            Assert.IsTrue(StringTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
+                            break;
+                        case SearchParamType.Token:
+                            Assert.IsTrue(TokenTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
+                            break;
+                        case SearchParamType.Reference:
+                            Assert.IsTrue(ReferenceTypes.Contains(returnType) || _mi.IsKnownResource(returnType), $"Search Type mismatch {searchType} type on {returnType}");
+                            break;
+                        case SearchParamType.Quantity:
+                            Assert.IsTrue(QuantityTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
+                            break;
+                        case SearchParamType.Uri:
+                            Assert.IsTrue(UriTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}");
+                            break;
+                        case SearchParamType.Composite:
+                            // Need to feed this back into itself to verify
+                            foreach (var cp in spd.Component)
+                            {
+                                // resolve the composite canonical to work out what type it should be
+                                var componentSearchParameterType = ModelInfo.SearchParameters.Where(sp => sp.Url == cp.Definition).FirstOrDefault()?.Type;
+                                Assert.IsNotNull(componentSearchParameterType, $"Failed to resolve component URL: {cp.Definition}");
+                                foreach (var type in r.Types)
+                                {
+                                    var visitorComponent = new FhirPathExpressionVisitor();
+                                    visitorComponent.RegisterVariable("resource", resourceType);
+                                    visitorComponent.RegisterVariable("context", type.ClassMapping);
+                                    visitorComponent.AddInputType(type.ClassMapping);
+                                    VerifyExpression(
+                                        resourceType,
+                                        cp.Expression,
+                                        componentSearchParameterType.Value,
+                                        expectSuccessOutcome,
+                                        expectValidSearch,
+                                        null,
+                                        visitorComponent);
+                                }
+                            }
+                            break;
+                        case SearchParamType.Special:
+                            // No real way to verify this special type
+                            // Assert.Inconclusive($"Need to verify search {searchType} type on {returnType}");
+                            break;
+                    }
                 }
             }
         }
