@@ -273,8 +273,13 @@ namespace Hl7.Fhir.FhirPath.Validator
                     }
                     else
                     {
-                        // unkn
-                        System.Diagnostics.Trace.WriteLine($"No types specified");
+                        // System.Diagnostics.Trace.WriteLine($"No types specified");
+                        // Type not listed, so just enumerate ALL resources
+                        foreach (var typeName in _supportedResources)
+                        {
+                            var cm = _mi.FindClassMapping(typeName);
+                            outputProps.Types.Add(new NodeProps(cm));
+                    }
                     }
                     // outputProps.Types.Add(t);
                 }
