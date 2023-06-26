@@ -24,6 +24,68 @@ namespace Hl7.Fhir.FhirPath.Validator
             RegisterVariable("sctt", typeof(Hl7.Fhir.Model.FhirString));
         }
 
+        /// <summary>
+        /// Set the Context of the expression to verify 
+        /// (and also set the resource, rootResource and context variables)
+        /// </summary>
+        /// <param name="definitionPath">StructureDefinition style path to the property (not a fhirpath expression)</param>
+        public void SetContext(string definitionPath)
+        {
+            var path = definitionPath.Replace("[x]", "");
+            string typeName = path;
+            if (path.Contains('.'))
+            {
+                typeName = path.Substring(0, path.IndexOf("."));
+                path = path.Substring(path.IndexOf(".") + 1);
+            }
+            else
+            {
+                path = null;
+            }
+            var rootType = _mi.GetTypeForFhirType(typeName);
+
+            if (rootType != null)
+            {
+                RegisterVariable("rootResource", rootType);
+
+                if (string.IsNullOrEmpty(path))
+                {
+                    RegisterVariable("resource", rootType);
+                    RegisterVariable("context", rootType);
+                    AddInputType(rootType);
+                    return;
+                }
+
+                var resourceType = rootType; // don't set this till we get to the end, as it could be different
+                var nodes = path.Split('.').ToList();
+                IEnumerable<ClassMapping> cm = new[] { _mi.FindOrImportClassMapping(rootType) }.Where(v => v != null).ToList();
+                while (cm.Any() && nodes.Any())
+                {
+                    var pm = cm.Select(cm => cm.FindMappedElementByName(nodes[0]) ?? cm.FindMappedElementByChoiceName(nodes[0]))
+                        .Where(c => c != null)
+                        .ToList();
+                    cm = pm.SelectMany(pm2 => {
+                        if (pm2.Choice == ChoiceType.DatatypeChoice && pm2.FhirType.Length == 1 && pm2.FhirType[0].Name == "DataType")
+                        {
+                            // This is the set of open types
+                            return _openTypes.Select(ot => _mi.FindOrImportClassMapping(ot));
+                        }
+                        if (pm2.Name != nodes[0])
+                            return pm2?.FhirType.Where(t => nodes[0].EndsWith(t.Name)).Select(ft => _mi.FindOrImportClassMapping(ft));
+                        return pm2?.FhirType.Select(ft => _mi.FindOrImportClassMapping(ft));
+                    }).Where(pm => pm != null).ToList();
+                    nodes.RemoveAt(0);
+                }
+
+                RegisterVariable("resource", resourceType);
+                foreach (var tcm in cm)
+                {
+                    RegisterVariable("context", tcm); // this won't replace things, so not quite right
+                    AddInputType(tcm);
+                }
+            }
+        }
+
         private readonly ModelInspector _mi;
         private readonly List<string> _supportedResources;
         private readonly Type[] _openTypes;
