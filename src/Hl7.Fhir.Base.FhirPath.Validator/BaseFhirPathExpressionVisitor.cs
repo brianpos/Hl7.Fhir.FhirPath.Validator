@@ -149,6 +149,24 @@ namespace Hl7.Fhir.FhirPath.Validator
             return r;
         }
 
+        private readonly string[] boolOperators = new[]
+        {
+            "=",
+            "~",
+            "!=",
+            "!~",
+            "<",
+            "<=",
+            ">",
+            ">=",
+            "in",
+            "contains",
+            "or",
+            "xor",
+            "implies",
+            "and",
+        };
+
         private readonly string[] boolFuncs = new[]
         {
             "empty",
@@ -312,7 +330,12 @@ namespace Hl7.Fhir.FhirPath.Validator
             else if (passthroughFuncs.Contains(function.FunctionName))
             {
                 foreach (var t in focus.Types)
+                {
+                    if (function.FunctionName == "first" || function.FunctionName == "last" || function.FunctionName == "tail")
+                        outputProps.Types.Add(new NodeProps(t.ClassMapping, t.PropertyMapping) { IsCollection = false });
+                    else
                     outputProps.Types.Add(t);
+            }
             }
             else if (function.FunctionName == "iif")
             {
@@ -479,7 +502,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                             _result.Append($" {be.Op} ");
                         first = arg.Accept(this);
                     }
-                    if (be.Op == "=" || be.Op == "!=")
+                    if (boolOperators.Contains(be.Op))
                     {
                         r.AddType(_mi, typeof(Hl7.Fhir.Model.FhirBoolean));
                     }
