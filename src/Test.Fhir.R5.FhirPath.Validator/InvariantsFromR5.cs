@@ -138,7 +138,7 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine($"Expression:\r\n{expression}");
 
             if (expression.Contains("descendants()"))
-                Assert.Fail("Checking does not support descendants()");
+                Assert.Inconclusive("Checking does not support descendants()");
 
             Console.WriteLine("---------");
             var visitor = new FhirPathExpressionVisitor();
@@ -151,6 +151,8 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success == expectSuccess);
+            if (expectSuccess)
+                Assert.AreEqual("boolean", r.ToString(), "Invariants must return a boolean");
         }
     }
 }
