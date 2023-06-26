@@ -263,7 +263,7 @@ namespace Hl7.Fhir.FhirPath.Validator
             "skip",
             "take",
             "last",
-            "tail"
+            "tail" 
         }.ToArray();
 
         private readonly string[] mathFuncs = new[]
@@ -343,8 +343,8 @@ namespace Hl7.Fhir.FhirPath.Validator
                     if (function.FunctionName == "first" || function.FunctionName == "last" || function.FunctionName == "tail")
                         outputProps.Types.Add(new NodeProps(t.ClassMapping, t.PropertyMapping) { IsCollection = false });
                     else
-                    outputProps.Types.Add(t);
-            }
+                        outputProps.Types.Add(t);
+                }
             }
             else if (function.FunctionName == "iif")
             {
@@ -386,7 +386,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                         {
                             var cm = _mi.FindClassMapping(typeName);
                             outputProps.Types.Add(new NodeProps(cm));
-                    }
+                        }
                     }
                     // outputProps.Types.Add(t);
                 }
@@ -423,285 +423,19 @@ namespace Hl7.Fhir.FhirPath.Validator
             var r = new FhirPathVisitorProps();
             if (expression is BinaryExpression be)
             {
-                if (be.Op == "is")
-                {
-                    FhirPathVisitorProps focus = expression.Arguments.First().Accept(this);
-                    var isTypeArg = expression.Arguments.Skip(1).First();
-                    FhirPathVisitorProps isType = isTypeArg.Accept(this);
-                    // Check if the type possibly COULD be evaluated as true
-                    if (isTypeArg is ConstantExpression ceTa)
-                    {
-                        // ceTa.Value
-                        var isTypeToCheck = _mi.GetTypeForFhirType(ceTa.Value as string);
-                        var possibleTypeNames = focus.Types.Select(t => t.ClassMapping.Name);
-                        if (!focus.Types.Any(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck)))
-                        {
-                            System.Diagnostics.Trace.WriteLine($"Expression included an 'is' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}");
-                            var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
-                            {
-                                Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
-                                Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
-                                Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an 'is' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
-                            };
-                            if (be.Location != null)
-                                issue.Location = new[] { $"Line {be.Location.LineNumber}, Position {be.Location.LineNumber}" };
-                            Outcome.AddIssue(issue);
-                        }
-                    }
-                    // TODO:
-                    r.AddType(_mi, typeof(Hl7.Fhir.Model.FhirBoolean));
-                }
-                else if (be.Op == "as")
-                {
-                    FhirPathVisitorProps focus = expression.Arguments.First().Accept(this);
-                    var isTypeArg = expression.Arguments.Skip(1).First();
-                    FhirPathVisitorProps isType = isTypeArg.Accept(this);
-                    // Check if the type possibly COULD be evaluated as true
-                    if (isTypeArg is ConstantExpression ceTa)
-                    {
-                        // ceTa.Value
-                        var isTypeToCheck = _mi.GetTypeForFhirType(ceTa.Value as string);
-                        var possibleTypeNames = focus.Types.Select(t => t.ClassMapping.Name);
-                        var validResultTypes = focus.Types.Where(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck));
-                        if (!validResultTypes.Any())
-                        {
-                            System.Diagnostics.Trace.WriteLine($"Expression included an 'as' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}");
-                            var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
-                            {
-                                Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
-                                Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
-                                Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an 'as' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
-                            };
-                            if (be.Location != null)
-                                issue.Location = new[] { $"Line {be.Location.LineNumber}, Position {be.Location.LineNumber}" };
-                            Outcome.AddIssue(issue);
-                        }
-                        else
-                        {
-                            // filter down to the types listed
-                            foreach (var rt in validResultTypes)
-                            {
-                                r.Types.Add(rt);
-                            }
-                        }
-                    }
-                }
-                else if (be.Op == "|")
-                {
-                    IncrementTab();
-                    FhirPathVisitorProps first = null;
-                    foreach (var arg in expression.Arguments)
-                    {
-                        if (first != null)
-                            _result.Append($" {be.Op} ");
-                        first = arg.Accept(this);
-                        foreach (var t in first.Types)
-                            r.Types.Add(t);
-                    }
-                    _result.AppendLine($" : {r} (op: {be.Op})");
-                    DecrementTab();
-                    return r;
-                }
-                else
-                {
-                    FhirPathVisitorProps first = null;
-                    foreach (var arg in expression.Arguments)
-                    {
-                        if (first != null)
-                            _result.Append($" {be.Op} ");
-                        first = arg.Accept(this);
-                    }
-                    if (boolOperators.Contains(be.Op))
-                    {
-                        r.AddType(_mi, typeof(Hl7.Fhir.Model.FhirBoolean));
-                    }
-                    else
-                    {
-                        foreach (var t in first.Types)
-                            r.Types.Add(t);
-                    }
-                }
-
-                _result.AppendLine($" : {r} (op: {be.Op})");
-                return r;
+                return VisitBinaryExpression(expression, r, be);
             }
             var rFocus = expression.Focus.Accept(this);
             _stack.Push(rFocus);
 
             if (expression is IndexerExpression)
             {
-                _result.Append('[');
-                foreach (var arg in expression.Arguments)
-                    arg.Accept(this);
-                _result.Append(']');
-                foreach (var t in rFocus.Types)
-                    r.Types.Add(t);
-                // _result.AppendLine($" : {String.Join(", ", r.Types.Select(v => v.Name))}");
-                _stack.Pop();
-                return r;
+                return VisitIndexerExpression(expression, r, rFocus);
             }
 
             if (expression is ChildExpression ce)
             {
-                // _stack.Push(rFocus);
-                if (!rFocus.isRoot)
-                    _result.Append('.');
-                else
-                {
-                    if (rFocus.Types.FirstOrDefault().ClassMapping?.Name == ce.ChildName)
-                    {
-                        r.Types.Add(rFocus.Types.FirstOrDefault());
-                        if (_repeatChildren?.ContainsKey(ce) == true)
-                            _repeatChildren[ce] = null;
-                        return r;
-                    }
-                    else
-                    {
-                        // This is a workaround for search parameters
-                        // where they merge multiple resource types into
-                        // the same expression.
-                        if (_mi.IsKnownResource(ce.ChildName))
-                        {
-                            var rt = _mi.GetTypeForFhirType(ce.ChildName);
-                            if (rt.Name == ce.ChildName)
-                            {
-                                r.AddType(_mi, rt);
-                                if (_repeatChildren?.ContainsKey(ce) == true)
-                                    _repeatChildren[ce] = null;
-                            return r;
-                        }
-                    }
-                }
-                }
-                bool propFound = false;
-                foreach (var t in rFocus.Types)
-                {
-                    var childProp = t.ClassMapping.FindMappedElementByName(ce.ChildName);
-                    if (childProp == null)
-                    {
-                        // Check if this is a choice type (using the choicename in the type is not valid)
-                        var ctCP = t.ClassMapping.FindMappedElementByChoiceName(ce.ChildName);
-                        if (ctCP != null)
-                        {
-                            // report this as an error!!!
-                            var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
-                            {
-                                Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
-                                Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Value,
-                                Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' is the choice type, remove the type from the end - {ctCP.Name}" }
-                            };
-                            if (expression.Location != null)
-                                issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
-                            if (_repeatChildren != null)
-                            {
-                                if (!_repeatChildren.ContainsKey(ce))
-                                    _repeatChildren.Add(ce, issue);
-                            }
-                            else
-                            Outcome.AddIssue(issue);
-                        }
-                    }
-                    if (childProp != null)
-                    {
-                        // _stack.Push()
-                        System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {String.Join(",", childProp.FhirType.Select(v => v.Name).ToArray())}");
-
-                        if (childProp.Choice == ChoiceType.ResourceChoice)
-                        {
-                            foreach (var rt in _supportedResources)
-                            {
-                                if (!_mi.IsKnownResource(rt))
-                                    continue;
-                                var cm = _mi.FindClassMapping(rt);
-                                if (cm != null)
-                                {
-                                    // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
-                                    r.Types.Add(new NodeProps(cm, childProp));
-                                    propFound = true;
-                                    if (_repeatChildren?.ContainsKey(ce) == true)
-                                        _repeatChildren[ce] = null;
-                                }
-                                else
-                                {
-                                    System.Diagnostics.Trace.WriteLine($"class {childProp.ImplementingType} not found");
-                                }
-                            }
-                        }
-                        else if (childProp.Choice == ChoiceType.DatatypeChoice)
-                        {
-                            foreach (var ft in childProp.FhirType)
-                            {
-                                var cm = _mi.FindOrImportClassMapping(ft);
-                                if (cm != null)
-                                {
-                                    if (ft.FullName == "Hl7.Fhir.Model.DataType" && t.ClassMapping.Name == "Extension")
-                                    {
-                                        // List the actual fhir types valid in extensions
-                                        foreach (var rt in _openTypes)
-                                        {
-                                            var cme = _mi.FindOrImportClassMapping(rt);
-                                            if (cme != null)
-                                            {
-                                                // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
-                                                r.Types.Add(new NodeProps(cme, childProp));
-                                                propFound = true;
-                                                if (_repeatChildren?.ContainsKey(ce) == true)
-                                                    _repeatChildren[ce] = null;
-                                            }
-                                        }
-                                        break;
-                                    }
-                                    r.Types.Add(new NodeProps(cm, childProp));
-                                    propFound = true;
-                                    if (_repeatChildren?.ContainsKey(ce) == true)
-                                        _repeatChildren[ce] = null;
-                                }
-                                else
-                                {
-                                    System.Diagnostics.Trace.WriteLine($"class {childProp.ImplementingType} not found");
-                                }
-
-                            }
-                        }
-                        else
-                        {
-                            foreach (var ct in childProp.FhirType)
-                            {
-                                var cm = _mi.FindOrImportClassMapping(ct);
-                                if (cm != null)
-                                {
-                                    r.Types.Add(new NodeProps(cm, childProp));
-                                    propFound = true;
-                                    if (_repeatChildren?.ContainsKey(ce) == true)
-                                        _repeatChildren[ce] = null;
-                                }
-                            }
-                        }
-                    }
-                }
-                if (!propFound)
-                {
-                    System.Diagnostics.Trace.WriteLine($"prop '{ce.ChildName}' not found");
-                    var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
-                    {
-                        Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
-                        Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
-                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' not found on {rFocus}" }
-                    };
-                    if (expression.Location != null)
-                        issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
-                    if (_repeatChildren != null)
-                    {
-                        if (!_repeatChildren.ContainsKey(ce))
-                            _repeatChildren.Add(ce, issue);
-                    }
-                    else
-                    Outcome.AddIssue(issue);
-                }
-                _result.Append($"{ce.ChildName}");
-                _result.AppendLine($" : {r}");
-                _stack.Pop();
-                return r;
+                return VisitChildExpression(expression, r, rFocus, ce);
             }
 
             if (!rFocus.isRoot)
@@ -721,71 +455,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 
             if (expression.FunctionName == "repeat")
             {
-                _repeatChildren = new Dictionary<ChildExpression, OperationOutcome.IssueComponent?>();
-
-                // Special handling for repeat,
-                // iteratively select types using the expressions we
-                // work out if all the names are actually possible
-                List<FhirPathVisitorProps> argTypesR = new();
-                foreach (var arg in expression.Arguments)
-                {
-                    if (argTypesR.Count > 0)
-                        _result.Append(", ");
-                    argTypesR.Add(arg.Accept(this));
-                    foreach (var t in argTypesR)
-                    {
-                        foreach (var t2 in t.Types)
-                            if (!r.Types.Contains(t2))
-                                r.Types.Add(t2);
-                    }
-                }
-
-                // Now iterate in with these result types 
-                _stack.Push(r);
-                bool bChanged = false;
-                int maxIterations = 10;
-                do
-                {
-                    bChanged = false;
-                    maxIterations--;
-                    foreach (var arg in expression.Arguments)
-                    {
-                        _result.Append(", ");
-                        argTypesR.Add(arg.Accept(this));
-                        foreach (var t in argTypesR)
-                        {
-                            foreach (var t2 in t.Types)
-                                if (!r.Types.Any(t => t.ClassMapping == t2.ClassMapping))
-                                {
-                                    r.Types.Add(t2);
-                                    bChanged = true;
-                                }
-                        }
-                    }
-                }
-                while (bChanged && maxIterations > 0);
-                if (maxIterations == 0)
-                {
-                    var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
-                    {
-                        Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
-                        Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
-                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"repeat() iterations exceeded 10" }
-                    };
-                    Outcome.AddIssue(issue);
-
-                }
-                _stack.Pop();
-                if (_repeatChildren != null)
-                {
-                    foreach (var iss in _repeatChildren.Values.Where(v =>v != null))
-                    {
-                        Outcome.Issue.Add(iss);
-                    }
-                    _repeatChildren = null;
-                }
-
-                return r;
+                return VisitRepeatFunction(expression, r);
             }
 
             IncrementTab();
@@ -817,6 +487,356 @@ namespace Hl7.Fhir.FhirPath.Validator
             _result.AppendLine($" : {r}");
 
             _stack.Pop();
+            return r;
+        }
+
+        private FhirPathVisitorProps VisitRepeatFunction(FunctionCallExpression expression, FhirPathVisitorProps r)
+        {
+            _repeatChildren = new Dictionary<ChildExpression, OperationOutcome.IssueComponent?>();
+
+            // Special handling for repeat,
+            // iteratively select types using the expressions we
+            // work out if all the names are actually possible
+            List<FhirPathVisitorProps> argTypesR = new();
+            foreach (var arg in expression.Arguments)
+            {
+                if (argTypesR.Count > 0)
+                    _result.Append(", ");
+                argTypesR.Add(arg.Accept(this));
+                foreach (var t in argTypesR)
+                {
+                    foreach (var t2 in t.Types)
+                        if (!r.Types.Contains(t2))
+                            r.Types.Add(t2);
+                }
+            }
+
+            // Now iterate in with these result types 
+            _stack.Push(r);
+            bool bChanged = false;
+            int maxIterations = 10;
+            do
+            {
+                bChanged = false;
+                maxIterations--;
+                foreach (var arg in expression.Arguments)
+                {
+                    _result.Append(", ");
+                    argTypesR.Add(arg.Accept(this));
+                    foreach (var t in argTypesR)
+                    {
+                        foreach (var t2 in t.Types)
+                            if (!r.Types.Any(t => t.ClassMapping == t2.ClassMapping))
+                            {
+                                r.Types.Add(t2);
+                                bChanged = true;
+                            }
+                    }
+                }
+            }
+            while (bChanged && maxIterations > 0);
+            if (maxIterations == 0)
+            {
+                var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                {
+                    Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                    Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
+                    Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"repeat() iterations exceeded 10" }
+                };
+                Outcome.AddIssue(issue);
+
+            }
+            _stack.Pop();
+            if (_repeatChildren != null)
+            {
+                foreach (var iss in _repeatChildren.Values.Where(v => v != null))
+                {
+                    Outcome.Issue.Add(iss);
+                }
+                _repeatChildren = null;
+            }
+
+            return r;
+        }
+
+        private FhirPathVisitorProps VisitChildExpression(FunctionCallExpression expression, FhirPathVisitorProps r, FhirPathVisitorProps rFocus, ChildExpression ce)
+        {
+            // _stack.Push(rFocus);
+            if (!rFocus.isRoot)
+                _result.Append('.');
+            else
+            {
+                if (rFocus.Types.FirstOrDefault().ClassMapping?.Name == ce.ChildName)
+                {
+                    r.Types.Add(rFocus.Types.FirstOrDefault());
+                    if (_repeatChildren?.ContainsKey(ce) == true)
+                        _repeatChildren[ce] = null;
+                    return r;
+                }
+                else
+                {
+                    // This is a workaround for search parameters
+                    // where they merge multiple resource types into
+                    // the same expression.
+                    if (_mi.IsKnownResource(ce.ChildName))
+                    {
+                        var rt = _mi.GetTypeForFhirType(ce.ChildName);
+                        if (rt.Name == ce.ChildName)
+                        {
+                            r.AddType(_mi, rt);
+                            if (_repeatChildren?.ContainsKey(ce) == true)
+                                _repeatChildren[ce] = null;
+                            return r;
+                        }
+                    }
+                }
+            }
+            bool propFound = false;
+            foreach (var t in rFocus.Types)
+            {
+                var childProp = t.ClassMapping.FindMappedElementByName(ce.ChildName);
+                if (childProp == null)
+                {
+                    // Check if this is a choice type (using the choicename in the type is not valid)
+                    var ctCP = t.ClassMapping.FindMappedElementByChoiceName(ce.ChildName);
+                    if (ctCP != null)
+                    {
+                        // report this as an error!!!
+                        var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                        {
+                            Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                            Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Value,
+                            Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' is the choice type, remove the type from the end - {ctCP.Name}" }
+                        };
+                        if (expression.Location != null)
+                            issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+                        if (_repeatChildren != null)
+                        {
+                            if (!_repeatChildren.ContainsKey(ce))
+                                _repeatChildren.Add(ce, issue);
+                        }
+                        else
+                            Outcome.AddIssue(issue);
+                    }
+                }
+                if (childProp != null)
+                {
+                    // _stack.Push()
+                    System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {String.Join(",", childProp.FhirType.Select(v => v.Name).ToArray())}");
+
+                    if (childProp.Choice == ChoiceType.ResourceChoice)
+                    {
+                        foreach (var rt in _supportedResources)
+                        {
+                            if (!_mi.IsKnownResource(rt))
+                                continue;
+                            var cm = _mi.FindClassMapping(rt);
+                            if (cm != null)
+                            {
+                                // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
+                                r.Types.Add(new NodeProps(cm, childProp));
+                                propFound = true;
+                                if (_repeatChildren?.ContainsKey(ce) == true)
+                                    _repeatChildren[ce] = null;
+                            }
+                            else
+                            {
+                                System.Diagnostics.Trace.WriteLine($"class {childProp.ImplementingType} not found");
+                            }
+                        }
+                    }
+                    else if (childProp.Choice == ChoiceType.DatatypeChoice)
+                    {
+                        foreach (var ft in childProp.FhirType)
+                        {
+                            var cm = _mi.FindOrImportClassMapping(ft);
+                            if (cm != null)
+                            {
+                                if (ft.FullName == "Hl7.Fhir.Model.DataType" && t.ClassMapping.Name == "Extension")
+                                {
+                                    // List the actual fhir types valid in extensions
+                                    foreach (var rt in _openTypes)
+                                    {
+                                        var cme = _mi.FindOrImportClassMapping(rt);
+                                        if (cme != null)
+                                        {
+                                            // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
+                                            r.Types.Add(new NodeProps(cme, childProp));
+                                            propFound = true;
+                                            if (_repeatChildren?.ContainsKey(ce) == true)
+                                                _repeatChildren[ce] = null;
+                                        }
+                                    }
+                                    break;
+                                }
+                                r.Types.Add(new NodeProps(cm, childProp));
+                                propFound = true;
+                                if (_repeatChildren?.ContainsKey(ce) == true)
+                                    _repeatChildren[ce] = null;
+                            }
+                            else
+                            {
+                                System.Diagnostics.Trace.WriteLine($"class {childProp.ImplementingType} not found");
+                            }
+
+                        }
+                    }
+                    else
+                    {
+                        foreach (var ct in childProp.FhirType)
+                        {
+                            var cm = _mi.FindOrImportClassMapping(ct);
+                            if (cm != null)
+                            {
+                                r.Types.Add(new NodeProps(cm, childProp));
+                                propFound = true;
+                                if (_repeatChildren?.ContainsKey(ce) == true)
+                                    _repeatChildren[ce] = null;
+                            }
+                        }
+                    }
+                }
+            }
+            if (!propFound)
+            {
+                System.Diagnostics.Trace.WriteLine($"prop '{ce.ChildName}' not found");
+                var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                {
+                    Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                    Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
+                    Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' not found on {rFocus}" }
+                };
+                if (expression.Location != null)
+                    issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+                if (_repeatChildren != null)
+                {
+                    if (!_repeatChildren.ContainsKey(ce))
+                        _repeatChildren.Add(ce, issue);
+                }
+                else
+                    Outcome.AddIssue(issue);
+            }
+            _result.Append($"{ce.ChildName}");
+            _result.AppendLine($" : {r}");
+            _stack.Pop();
+            return r;
+        }
+
+        private FhirPathVisitorProps VisitIndexerExpression(FunctionCallExpression expression, FhirPathVisitorProps r, FhirPathVisitorProps rFocus)
+        {
+            _result.Append('[');
+            foreach (var arg in expression.Arguments)
+                arg.Accept(this);
+            _result.Append(']');
+            foreach (var t in rFocus.Types)
+                r.Types.Add(t);
+            // _result.AppendLine($" : {String.Join(", ", r.Types.Select(v => v.Name))}");
+            _stack.Pop();
+            return r;
+        }
+
+        private FhirPathVisitorProps VisitBinaryExpression(FunctionCallExpression expression, FhirPathVisitorProps r, BinaryExpression be)
+        {
+            if (be.Op == "is")
+            {
+                FhirPathVisitorProps focus = expression.Arguments.First().Accept(this);
+                var isTypeArg = expression.Arguments.Skip(1).First();
+                FhirPathVisitorProps isType = isTypeArg.Accept(this);
+                // Check if the type possibly COULD be evaluated as true
+                if (isTypeArg is ConstantExpression ceTa)
+                {
+                    // ceTa.Value
+                    var isTypeToCheck = _mi.GetTypeForFhirType(ceTa.Value as string);
+                    var possibleTypeNames = focus.Types.Select(t => t.ClassMapping.Name);
+                    if (!focus.Types.Any(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck)))
+                    {
+                        System.Diagnostics.Trace.WriteLine($"Expression included an 'is' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}");
+                        var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                        {
+                            Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                            Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
+                            Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an 'is' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
+                        };
+                        if (be.Location != null)
+                            issue.Location = new[] { $"Line {be.Location.LineNumber}, Position {be.Location.LineNumber}" };
+                        Outcome.AddIssue(issue);
+                    }
+                }
+                // TODO:
+                r.AddType(_mi, typeof(Hl7.Fhir.Model.FhirBoolean));
+            }
+            else if (be.Op == "as")
+            {
+                FhirPathVisitorProps focus = expression.Arguments.First().Accept(this);
+                var isTypeArg = expression.Arguments.Skip(1).First();
+                FhirPathVisitorProps isType = isTypeArg.Accept(this);
+                // Check if the type possibly COULD be evaluated as true
+                if (isTypeArg is ConstantExpression ceTa)
+                {
+                    // ceTa.Value
+                    var isTypeToCheck = _mi.GetTypeForFhirType(ceTa.Value as string);
+                    var possibleTypeNames = focus.Types.Select(t => t.ClassMapping.Name);
+                    var validResultTypes = focus.Types.Where(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck));
+                    if (!validResultTypes.Any())
+                    {
+                        System.Diagnostics.Trace.WriteLine($"Expression included an 'as' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}");
+                        var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                        {
+                            Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                            Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
+                            Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an 'as' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
+                        };
+                        if (be.Location != null)
+                            issue.Location = new[] { $"Line {be.Location.LineNumber}, Position {be.Location.LineNumber}" };
+                        Outcome.AddIssue(issue);
+                    }
+                    else
+                    {
+                        // filter down to the types listed
+                        foreach (var rt in validResultTypes)
+                        {
+                            r.Types.Add(rt);
+                        }
+                    }
+                }
+            }
+            else if (be.Op == "|")
+            {
+                IncrementTab();
+                FhirPathVisitorProps first = null;
+                foreach (var arg in expression.Arguments)
+                {
+                    if (first != null)
+                        _result.Append($" {be.Op} ");
+                    first = arg.Accept(this);
+                    foreach (var t in first.Types)
+                        r.Types.Add(t);
+                }
+                _result.AppendLine($" : {r} (op: {be.Op})");
+                DecrementTab();
+                return r;
+            }
+            else
+            {
+                FhirPathVisitorProps first = null;
+                foreach (var arg in expression.Arguments)
+                {
+                    if (first != null)
+                        _result.Append($" {be.Op} ");
+                    first = arg.Accept(this);
+                }
+                if (boolOperators.Contains(be.Op))
+                {
+                    r.AddType(_mi, typeof(Hl7.Fhir.Model.FhirBoolean));
+                }
+                else
+                {
+                    foreach (var t in first.Types)
+                        r.Types.Add(t);
+                }
+            }
+
+            _result.AppendLine($" : {r} (op: {be.Op})");
             return r;
         }
 
