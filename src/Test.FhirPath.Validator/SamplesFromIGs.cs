@@ -842,6 +842,7 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success == expectSuccess);
+            Assert.AreEqual("boolean", r.ToString(), "Invariants must return a boolean");
         }
     }
 }

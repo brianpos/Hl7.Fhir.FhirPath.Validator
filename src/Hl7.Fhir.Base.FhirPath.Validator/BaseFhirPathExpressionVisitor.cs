@@ -1,4 +1,5 @@
 ﻿using Hl7.Fhir.Introspection;
+using Hl7.Fhir.Model;
 using Hl7.Fhir.Support;
 using Hl7.Fhir.Utility;
 using Hl7.FhirPath.Expressions;
@@ -89,6 +90,14 @@ namespace Hl7.Fhir.FhirPath.Validator
         private readonly ModelInspector _mi;
         private readonly List<string> _supportedResources;
         private readonly Type[] _openTypes;
+
+        // for repeat error checking
+        struct RepeatInfo
+        {
+            public ChildExpression ce;
+            public OperationOutcome.IssueComponent issue;
+        }
+        Dictionary<ChildExpression, OperationOutcome.IssueComponent> _repeatChildren;
 
         public Hl7.Fhir.Model.OperationOutcome Outcome { get; } = new Hl7.Fhir.Model.OperationOutcome();
 
@@ -542,6 +551,8 @@ namespace Hl7.Fhir.FhirPath.Validator
                     if (rFocus.Types.FirstOrDefault().ClassMapping?.Name == ce.ChildName)
                     {
                         r.Types.Add(rFocus.Types.FirstOrDefault());
+                        if (_repeatChildren?.ContainsKey(ce) == true)
+                            _repeatChildren[ce] = null;
                         return r;
                     }
                     else
@@ -551,10 +562,16 @@ namespace Hl7.Fhir.FhirPath.Validator
                         // the same expression.
                         if (_mi.IsKnownResource(ce.ChildName))
                         {
-                            r.AddType(_mi, _mi.GetTypeForFhirType(ce.ChildName));
+                            var rt = _mi.GetTypeForFhirType(ce.ChildName);
+                            if (rt.Name == ce.ChildName)
+                            {
+                                r.AddType(_mi, rt);
+                                if (_repeatChildren?.ContainsKey(ce) == true)
+                                    _repeatChildren[ce] = null;
                             return r;
                         }
                     }
+                }
                 }
                 bool propFound = false;
                 foreach (var t in rFocus.Types)
@@ -575,6 +592,12 @@ namespace Hl7.Fhir.FhirPath.Validator
                             };
                             if (expression.Location != null)
                                 issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+                            if (_repeatChildren != null)
+                            {
+                                if (!_repeatChildren.ContainsKey(ce))
+                                    _repeatChildren.Add(ce, issue);
+                            }
+                            else
                             Outcome.AddIssue(issue);
                         }
                     }
@@ -595,6 +618,8 @@ namespace Hl7.Fhir.FhirPath.Validator
                                     // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
                                     r.Types.Add(new NodeProps(cm, childProp));
                                     propFound = true;
+                                    if (_repeatChildren?.ContainsKey(ce) == true)
+                                        _repeatChildren[ce] = null;
                                 }
                                 else
                                 {
@@ -620,12 +645,16 @@ namespace Hl7.Fhir.FhirPath.Validator
                                                 // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
                                                 r.Types.Add(new NodeProps(cme, childProp));
                                                 propFound = true;
+                                                if (_repeatChildren?.ContainsKey(ce) == true)
+                                                    _repeatChildren[ce] = null;
                                             }
                                         }
                                         break;
                                     }
                                     r.Types.Add(new NodeProps(cm, childProp));
                                     propFound = true;
+                                    if (_repeatChildren?.ContainsKey(ce) == true)
+                                        _repeatChildren[ce] = null;
                                 }
                                 else
                                 {
@@ -643,14 +672,10 @@ namespace Hl7.Fhir.FhirPath.Validator
                                 {
                                     r.Types.Add(new NodeProps(cm, childProp));
                                     propFound = true;
+                                    if (_repeatChildren?.ContainsKey(ce) == true)
+                                        _repeatChildren[ce] = null;
                                 }
                             }
-                            //var cm = _mi.FindOrImportClassMapping(childProp.ImplementingType);
-                            //if (cm != null)
-                            //{
-                            //    r.Types.Add(new NodeProps(cm, childProp));
-                            //    propFound = true;
-                            //}
                         }
                     }
                 }
@@ -665,6 +690,12 @@ namespace Hl7.Fhir.FhirPath.Validator
                     };
                     if (expression.Location != null)
                         issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+                    if (_repeatChildren != null)
+                    {
+                        if (!_repeatChildren.ContainsKey(ce))
+                            _repeatChildren.Add(ce, issue);
+                    }
+                    else
                     Outcome.AddIssue(issue);
                 }
                 _result.Append($"{ce.ChildName}");
@@ -686,6 +717,75 @@ namespace Hl7.Fhir.FhirPath.Validator
             if (expressionFuncs.Contains(expression.FunctionName))
             {
                 _stackThis.Push(rFocus);
+            }
+
+            if (expression.FunctionName == "repeat")
+            {
+                _repeatChildren = new Dictionary<ChildExpression, OperationOutcome.IssueComponent?>();
+
+                // Special handling for repeat,
+                // iteratively select types using the expressions we
+                // work out if all the names are actually possible
+                List<FhirPathVisitorProps> argTypesR = new();
+                foreach (var arg in expression.Arguments)
+                {
+                    if (argTypesR.Count > 0)
+                        _result.Append(", ");
+                    argTypesR.Add(arg.Accept(this));
+                    foreach (var t in argTypesR)
+                    {
+                        foreach (var t2 in t.Types)
+                            if (!r.Types.Contains(t2))
+                                r.Types.Add(t2);
+                    }
+                }
+
+                // Now iterate in with these result types 
+                _stack.Push(r);
+                bool bChanged = false;
+                int maxIterations = 10;
+                do
+                {
+                    bChanged = false;
+                    maxIterations--;
+                    foreach (var arg in expression.Arguments)
+                    {
+                        _result.Append(", ");
+                        argTypesR.Add(arg.Accept(this));
+                        foreach (var t in argTypesR)
+                        {
+                            foreach (var t2 in t.Types)
+                                if (!r.Types.Any(t => t.ClassMapping == t2.ClassMapping))
+                                {
+                                    r.Types.Add(t2);
+                                    bChanged = true;
+                                }
+                        }
+                    }
+                }
+                while (bChanged && maxIterations > 0);
+                if (maxIterations == 0)
+                {
+                    var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                    {
+                        Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                        Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
+                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"repeat() iterations exceeded 10" }
+                    };
+                    Outcome.AddIssue(issue);
+
+                }
+                _stack.Pop();
+                if (_repeatChildren != null)
+                {
+                    foreach (var iss in _repeatChildren.Values.Where(v =>v != null))
+                    {
+                        Outcome.Issue.Add(iss);
+                    }
+                    _repeatChildren = null;
+                }
+
+                return r;
             }
 
             IncrementTab();

@@ -38,6 +38,41 @@ namespace Test.Fhir.FhirPath.Validator
         }
 
         [TestMethod]
+        public void TestMethodRepeat()
+        {
+            string expression = "QuestionnaireResponse.repeat(item | answer)";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(QuestionnaireResponse));
+            var pe = _compiler.Parse(expression);
+            Console.WriteLine("---------");
+            var r = pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine($"Result Type: {r}");
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.AreEqual("QuestionnaireResponse#Item[], QuestionnaireResponse#Answer[]", r.ToString());
+            Assert.IsTrue(visitor.Outcome.Success);
+        }
+
+        [TestMethod]
+        public void TestMethodRepeatFailure()
+        {
+            string expression = "QuestionnaireResponse.repeat(item | answers)";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(QuestionnaireResponse));
+            var pe = _compiler.Parse(expression);
+            Console.WriteLine("---------");
+            var r = pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine($"Result Type: {r}");
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.AreEqual("QuestionnaireResponse#Item[]", r.ToString());
+            Assert.IsFalse(visitor.Outcome.Success);
+            Assert.AreEqual("prop 'answers' not found on QuestionnaireResponse", visitor.Outcome.Issue[0].Details.Text);
+        }
+
+        [TestMethod]
         public void TestVerticalPipeOperator()
         {
             string expression = "gender | birthDate";
