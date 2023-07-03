@@ -106,9 +106,6 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine("---------");
             var visitor = new FhirPathExpressionVisitor();
             var t = SelectType(type, out var rt);
-            if (t != rt)
-            {
-            }
             if (t != null)
                 visitor.RegisterVariable("context", t);
             visitor.AddInputType(t);

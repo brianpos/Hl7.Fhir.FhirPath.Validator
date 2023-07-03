@@ -320,7 +320,7 @@ namespace Test.Fhir.FhirPath.Validator
         [DataRow("StructureDefinition.snapshot", "sdf-3", "element.all(definition.exists() and min.exists() and max.exists())", true)]
         [DataRow("StructureDefinition.snapshot", "sdf-8b", "element.all(base.exists())", true)]
         [DataRow("StructureDefinition.snapshot.element", "sdf-10", "binding.empty() or binding.valueSet.exists() or binding.description.exists()", true)]
-        [DataRow("StructureDefinition.differential", "sdf-8a", "(%resource.kind = 'logical' or element.first().path.startsWith(%resource.type)) and (element.tail().empty() or element.tail().all(path.startsWith(%resource.differential.element.first().path.replaceMatches('\\..*','')&'.')))", true)]
+        [DataRow("StructureDefinition.differential", "sdf-8a", "(%resource.kind = 'logical' or element.first().path.startsWith(%resource.type)) and (element.tail().empty() or element.tail().all(path.startsWith(%resource.differential.element.first().path.replaceMatches('\\\\..*','')&'.')))", true)]
         [DataRow("StructureMap", "smp-0", "name.matches('[A-Z]([A-Za-z0-9_]){0,254}')", true)]
         [DataRow("TerminologyCapabilities", "tcp-0", "name.matches('[A-Z]([A-Za-z0-9_]){0,254}')", true)]
         [DataRow("TerminologyCapabilities", "tcp-3", "(kind != 'instance') or implementation.exists()", true)]
@@ -825,7 +825,7 @@ namespace Test.Fhir.FhirPath.Validator
         [DataRow("Immunization", "be-rule-vaccination-3", "reaction.detail.empty() or reaction.detail.resolve().code.memberOf('https://www.ehealth.fgov.be/standards/fhir/core-clinical/ValueSet/be-vs-reaction-manifestation-code').anyTrue()", true)]
         [DataRow("Immunization", "be-rule-vaccination-1", "vaccineCode.coding.code = 'other'  implies vaccineCode.text.exists()", true)]
         [DataRow("Immunization", "be-rule-vaccination-4", "encounter.empty() or encounter.resolve().location.location.resolve().type.coding.memberOf('https://www.ehealth.fgov.be/standards/fhir/vaccination/ValueSet/be-vs-care-location').anyTrue()", true)]
-        public void VerifyExpression(string type, string key, string expression, bool expectSuccess)
+        public void VerifyR4Expression(string type, string key, string expression, bool expectSuccess)
         {
             // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
             Console.WriteLine($"Context: {type}");
