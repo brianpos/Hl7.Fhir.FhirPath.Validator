@@ -21,8 +21,14 @@ namespace Hl7.Fhir.FhirPath.Validator
             PropertyMapping = propMap;
         }
 
-        public ClassMapping ClassMapping { get; set; }
-        public PropertyMapping PropertyMapping { get; set; }
+        public ClassMapping ClassMapping { get; private set; }
+        public PropertyMapping PropertyMapping { get; private set; }
         public bool IsCollection { get; set; }
+
+        public NodeProps AsCollection()
+        {
+            // The property mapping isn't brought forward
+            return new NodeProps(ClassMapping) { IsCollection = true };
+        }
     }
 }
