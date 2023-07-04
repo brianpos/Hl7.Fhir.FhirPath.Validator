@@ -105,15 +105,14 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine($"Canonical:\r\n{url}");
             Console.WriteLine("---------");
             var visitor = new FhirPathExpressionVisitor();
-            var t = SelectType(type, out var rt);
+            var t = _mi.GetTypeForFhirType(type);
             if (t != null)
+            {
                 visitor.RegisterVariable("context", t);
             visitor.AddInputType(t);
-
-            if (!rt.IsAssignableTo(typeof(Resource)))
-                rt = typeof(Resource);
-                visitor.RegisterVariable("resource", rt);
-            VerifyExpression(rt, expression, searchType, expectSuccessOutcome, expectValidSearch, spd, visitor);
+                visitor.RegisterVariable("resource", t);
+        }
+            VerifyExpression(t, expression, searchType, expectSuccessOutcome, expectValidSearch, spd, visitor);
         }
 
         private void VerifyExpression(Type resourceType, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, ModelInfo.SearchParamDefinition spd, FhirPathExpressionVisitor visitor)
@@ -241,44 +240,5 @@ namespace Test.Fhir.FhirPath.Validator
             "instant",
             "Timing",
         };
-
-        public Type? SelectType(string path, out Type? rootType)
-        {
-            string type = path;
-            if (path.Contains('.'))
-            {
-                type = path.Substring(0, path.IndexOf("."));
-                path = path.Substring(path.IndexOf(".") + 1);
-            }
-            else
-            {
-                path = null;
-            }
-            rootType = ModelInfo.GetTypeForFhirType(type);
-            if (!string.IsNullOrEmpty(path) && rootType != null)
-                return NavigateToProp(rootType, path);
-            return rootType;
-        }
-
-        public Type? NavigateToProp(Type t, string path)
-        {
-            var nodes = path.Split(".").ToList();
-            var cm = _mi.FindOrImportClassMapping(t);
-            while (cm != null && nodes.Any())
-            {
-                var pm = cm.FindMappedElementByName(nodes[0]);
-                if (pm == null)
-                {
-                    pm = cm.FindMappedElementByChoiceName(nodes[0]);
-                    cm = _mi.FindOrImportClassMapping(pm.FhirType.First(t => nodes[0].EndsWith(t.Name)));
-                }
-                else
-                {
-                    cm = _mi.FindOrImportClassMapping(pm.FhirType.First());
-                }
-                nodes.RemoveAt(0);
-            }
-            return cm.NativeType;
-        }
     }
 }
