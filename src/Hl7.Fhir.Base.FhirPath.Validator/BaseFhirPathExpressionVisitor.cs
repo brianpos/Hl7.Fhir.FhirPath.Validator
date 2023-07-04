@@ -155,10 +155,23 @@ namespace Hl7.Fhir.FhirPath.Validator
         {
             // ChildExpression ce 
             var r = new FhirPathVisitorProps();
-            if (expression.ExpressionType.Name == "String")
+            var t = _mi.GetTypeForFhirType(expression.ExpressionType.Name);
+            if (t != null)
             {
-                _result.Append($"'{expression.Value}'");
-                r.AddType(_mi, typeof(FhirString));
+                r.AddType(_mi, t);
+                var debugValue = expression.ExpressionType.Name.ToLower() switch
+                {
+                    "boolean" => $"{expression.Value}",
+                    "string" => $"'{expression.Value}'",
+                    "integer" => $"{expression.Value}",
+                    "decimal" => $"{expression.Value}",
+                    "date" => $"@{expression.Value}",
+                    "datetime" => $"@{expression.Value}",
+                    "time" => $"@T{expression.Value}",
+                    "quantity" => $"{expression.Value}",
+                    _ => ""
+                };
+                _result.Append(debugValue);
             }
             else
                 _result.Append($"{expression.Value}");
