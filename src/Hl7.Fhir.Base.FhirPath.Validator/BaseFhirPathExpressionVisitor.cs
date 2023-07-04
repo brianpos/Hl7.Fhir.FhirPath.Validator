@@ -189,12 +189,12 @@ namespace Hl7.Fhir.FhirPath.Validator
             "<=",
             ">",
             ">=",
-            "in",
-            "contains",
+            "in", // TODO: could check for type overlaps
+            "contains", // TODO: could check for type overlaps
             "or",
             "xor",
             "implies",
-            "and",
+            "and", // TODO: check for boolean values each side
         };
 
         private readonly string[] boolFuncs = new[]
@@ -279,6 +279,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 
         private readonly string[] passthroughFuncs = new[]
         {
+            "single",
             "where",
             "trace",
             "first",
@@ -286,7 +287,8 @@ namespace Hl7.Fhir.FhirPath.Validator
             "take",
             "last",
             "tail",
-            "combine",
+            "intersect", // TODO: could validate that these types have overlap
+            "exclude", // TODO: could validate that these types have overlap
         }.ToArray();
 
         private readonly string[] mathFuncs = new[]
@@ -371,7 +373,7 @@ namespace Hl7.Fhir.FhirPath.Validator
             }
             else if (function.FunctionName == "iif")
             {
-                // Test that the first parameter is always a boolean
+                // TODO: Test that the first parameter is always a boolean
                 // then return the union of the other 2 parameters
             }
             else if (function.FunctionName == "select")
@@ -481,9 +483,9 @@ namespace Hl7.Fhir.FhirPath.Validator
                 _result.Append('.');
             _result.Append($"{expression.FunctionName}(");
 
-            if (expression.FunctionName == "combine")
+            if (expression.FunctionName == "combine" || expression.FunctionName == "union")
             {
-                VisitCombineFunction(rFocus, expression, result);
+                VisitCombineOrUnionFunction(rFocus, expression, result);
                 _result.Append(')');
                 _result.AppendLine($" : {result}");
                 _stackPropertyContext.Pop();
@@ -598,7 +600,7 @@ namespace Hl7.Fhir.FhirPath.Validator
             }
         }
 
-        private void VisitCombineFunction(FhirPathVisitorProps rFocus, FunctionCallExpression expression, FhirPathVisitorProps result)
+        private void VisitCombineOrUnionFunction(FhirPathVisitorProps rFocus, FunctionCallExpression expression, FhirPathVisitorProps result)
         {
             // Start with the focus types
             foreach (var t in rFocus.Types)

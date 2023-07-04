@@ -54,6 +54,22 @@ namespace Test.Fhir.FhirPath.Validator
         }
 
         [TestMethod]
+        public void TestMethodUnion()
+        {
+            string expression = "name.select(given.join(' ').union(family).join(', '))";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(Patient));
+            var pe = _compiler.Parse(expression);
+            Console.WriteLine("---------");
+            var r = pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.AreEqual("string[]", r.ToString());
+            Assert.IsTrue(visitor.Outcome.Success);
+        }
+
+        [TestMethod]
         public void TestMethodRepeat()
         {
             string expression = "QuestionnaireResponse.repeat(item | answer)";
