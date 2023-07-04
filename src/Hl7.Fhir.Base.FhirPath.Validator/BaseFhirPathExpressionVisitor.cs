@@ -235,6 +235,7 @@ namespace Hl7.Fhir.FhirPath.Validator
             "all",
             "any",
             "supersetOf",
+            "subsetOf",
             // FHIR extensions to fhirpath
             "hasValue",
             "conformsTo",
