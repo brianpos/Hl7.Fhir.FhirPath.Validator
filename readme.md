@@ -26,7 +26,6 @@ Coming Soon:
 
 Known Issues/incomplete funcitonality:
 * missing functions: intersect, exclude, single, iif, descendants
-* ofType/as expressions will output the string type twice
 * type conversions http://hl7.org/fhirpath/N1/#conversion
 	* toBoolean
 	* toInteger
@@ -58,7 +57,7 @@ Known Issues/incomplete funcitonality:
 * Boolean logic operators should check that both sides are boolean type parameters
 * Math operators
 * Reflection
-* Checking types of parameters to functions
+* Checking types of parameters to functions (not just return types and object mdel prop names)
 
 > **Note:** Only reviewed up to section 6 in the specification
 
