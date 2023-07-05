@@ -313,7 +313,7 @@ namespace Hl7.Fhir.FhirPath.Validator
             {
                 // Check this before the boolfuncs tests
                 var isTypeArg = function.Arguments.First();
-                FhirPathVisitorProps isType = isTypeArg.Accept(this);
+                FhirPathVisitorProps isType = props.FirstOrDefault();
                 // Check if the type possibly COULD be evaluated as true
                 if (isTypeArg is ConstantExpression ceTa)
                 {
