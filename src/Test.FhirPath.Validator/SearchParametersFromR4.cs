@@ -7,7 +7,6 @@ using Hl7.Fhir.Model;
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace Test.Fhir.FhirPath.Validator
@@ -33,6 +32,23 @@ namespace Test.Fhir.FhirPath.Validator
         {
             get
             {
+                var knownBadOutcomes = new[] {
+                    // use of "as" on a collection
+                    "http://hl7.org/fhir/SearchParameter/Medication-ingredient-code",
+                    "http://hl7.org/fhir/SearchParameter/MedicationKnowledge-ingredient-code",
+                    "http://hl7.org/fhir/SearchParameter/Observation-component-value-concept",
+                    "http://hl7.org/fhir/SearchParameter/Observation-component-value-quantity",
+                    "http://hl7.org/fhir/SearchParameter/Substance-substance-reference",
+                    "http://hl7.org/fhir/SearchParameter/Composition-related-ref",
+                    "http://hl7.org/fhir/SearchParameter/Goal-target-date",
+                    "http://hl7.org/fhir/SearchParameter/Medication-ingredient",
+                    "http://hl7.org/fhir/SearchParameter/Observation-combo-value-concept",
+                    "http://hl7.org/fhir/SearchParameter/Observation-combo-value-quantity",
+                    "http://hl7.org/fhir/SearchParameter/Group-value",
+                    "http://hl7.org/fhir/SearchParameter/Substance-code",
+                    "http://hl7.org/fhir/SearchParameter/MedicationKnowledge-ingredient",
+                    "http://hl7.org/fhir/SearchParameter/Composition-related-id",
+                };
                 var knownBadSearchParams = new[] {
                     "http://hl7.org/fhir/SearchParameter/clinical-date",
                     "http://hl7.org/fhir/SearchParameter/CarePlan-activity-date",
@@ -64,8 +80,25 @@ namespace Test.Fhir.FhirPath.Validator
                         if (spd.Url == "http://hl7.org/fhir/SearchParameter/clinical-date")
                             spd.Expression = "AllergyIntolerance.recordedDate | CarePlan.period | CareTeam.period | ClinicalImpression.date | Composition.date | Consent.dateTime | DiagnosticReport.effective | Encounter.period | EpisodeOfCare.period | FamilyMemberHistory.date | Flag.period | (Immunization.occurrence as dateTime) | List.date | Observation.effective | Procedure.performed | (RiskAssessment.occurrence as dateTime) | SupplyRequest.authoredOn";
 
+                        // Workaround for http://hl7.org/fhir/SearchParameter/conformance-context using "as" on collections
+                        if (spd.Url == "http://hl7.org/fhir/SearchParameter/conformance-context")
+                            spd.Expression = "(CapabilityStatement.useContext.value.ofType(CodeableConcept)) | (CodeSystem.useContext.value.ofType(CodeableConcept)) | (CompartmentDefinition.useContext.value.ofType(CodeableConcept)) | (ConceptMap.useContext.value.ofType(CodeableConcept)) | (GraphDefinition.useContext.value.ofType(CodeableConcept)) | (ImplementationGuide.useContext.value.ofType(CodeableConcept)) | (MessageDefinition.useContext.value.ofType(CodeableConcept)) | (NamingSystem.useContext.value.ofType(CodeableConcept)) | (OperationDefinition.useContext.value.ofType(CodeableConcept)) | (SearchParameter.useContext.value.ofType(CodeableConcept)) | (StructureDefinition.useContext.value.ofType(CodeableConcept)) | (StructureMap.useContext.value.ofType(CodeableConcept)) | (TerminologyCapabilities.useContext.value.ofType(CodeableConcept)) | (ValueSet.useContext.value.ofType(CodeableConcept))";
+
+                        if (spd.Expression == "(CapabilityStatement.useContext.value as Quantity) | (CapabilityStatement.useContext.value as Range) | (CodeSystem.useContext.value as Quantity) | (CodeSystem.useContext.value as Range) | (CompartmentDefinition.useContext.value as Quantity) | (CompartmentDefinition.useContext.value as Range) | (ConceptMap.useContext.value as Quantity) | (ConceptMap.useContext.value as Range) | (GraphDefinition.useContext.value as Quantity) | (GraphDefinition.useContext.value as Range) | (ImplementationGuide.useContext.value as Quantity) | (ImplementationGuide.useContext.value as Range) | (MessageDefinition.useContext.value as Quantity) | (MessageDefinition.useContext.value as Range) | (NamingSystem.useContext.value as Quantity) | (NamingSystem.useContext.value as Range) | (OperationDefinition.useContext.value as Quantity) | (OperationDefinition.useContext.value as Range) | (SearchParameter.useContext.value as Quantity) | (SearchParameter.useContext.value as Range) | (StructureDefinition.useContext.value as Quantity) | (StructureDefinition.useContext.value as Range) | (StructureMap.useContext.value as Quantity) | (StructureMap.useContext.value as Range) | (TerminologyCapabilities.useContext.value as Quantity) | (TerminologyCapabilities.useContext.value as Range) | (ValueSet.useContext.value as Quantity) | (ValueSet.useContext.value as Range)")
+                            spd.Expression = "(CapabilityStatement.useContext.value.ofType(Quantity)) | (CapabilityStatement.useContext.value.ofType(Range)) | (CodeSystem.useContext.value.ofType(Quantity)) | (CodeSystem.useContext.value.ofType(Range)) | (CompartmentDefinition.useContext.value.ofType(Quantity)) | (CompartmentDefinition.useContext.value.ofType(Range)) | (ConceptMap.useContext.value.ofType(Quantity)) | (ConceptMap.useContext.value.ofType(Range)) | (GraphDefinition.useContext.value.ofType(Quantity)) | (GraphDefinition.useContext.value.ofType(Range)) | (ImplementationGuide.useContext.value.ofType(Quantity)) | (ImplementationGuide.useContext.value.ofType(Range)) | (MessageDefinition.useContext.value.ofType(Quantity)) | (MessageDefinition.useContext.value.ofType(Range)) | (NamingSystem.useContext.value.ofType(Quantity)) | (NamingSystem.useContext.value.ofType(Range)) | (OperationDefinition.useContext.value.ofType(Quantity)) | (OperationDefinition.useContext.value.ofType(Range)) | (SearchParameter.useContext.value.ofType(Quantity)) | (SearchParameter.useContext.value.ofType(Range)) | (StructureDefinition.useContext.value.ofType(Quantity)) | (StructureDefinition.useContext.value.ofType(Range)) | (StructureMap.useContext.value.ofType(Quantity)) | (StructureMap.useContext.value.ofType(Range)) | (TerminologyCapabilities.useContext.value.ofType(Quantity)) | (TerminologyCapabilities.useContext.value.ofType(Range)) | (ValueSet.useContext.value.ofType(Quantity)) | (ValueSet.useContext.value.ofType(Range))";
+
+                        if (spd.Expression.Contains("useContext.value as Quantity"))
+                            spd.Expression = spd.Expression.Replace(".useContext.value as Quantity", ".useContext.value.ofType(Quantity)");
+                        if (spd.Expression.Contains("useContext.value as CodeableConcept"))
+                            spd.Expression = spd.Expression.Replace(".useContext.value as CodeableConcept", ".useContext.value.ofType(CodeableConcept)");
+                        if (spd.Expression.Contains("useContext.value as Range"))
+                            spd.Expression = spd.Expression.Replace(".useContext.value as Range", ".useContext.value.ofType(Range)");
+
                         if (knownBadSearchParams.Contains(spd.Url))
                             expectedResult = false;
+
+                        if (knownBadOutcomes.Contains(spd.Url))
+                            expectedOutcomeResult = false;
 
                         result.Add(new object[] {
                             spd.Resource,
@@ -87,7 +120,6 @@ namespace Test.Fhir.FhirPath.Validator
         [DynamicData(nameof(R4Expressions))]
         public void R4Expr(string type, string key, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, string url, ModelInfo.SearchParamDefinition spd)
         {
-            // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
             Console.WriteLine($"Context: {type}");
             Console.WriteLine($"Search Param Name: {key}");
             Console.WriteLine($"Search Param Type: {searchType}");

@@ -189,6 +189,8 @@ namespace Hl7.Fhir.FhirPath.Validator
             "<=",
             ">",
             ">=",
+            "as",
+            "is",
             "or",
             "xor",
             "implies",

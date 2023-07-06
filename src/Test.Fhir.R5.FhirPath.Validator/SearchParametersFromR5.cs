@@ -28,7 +28,7 @@ namespace Test.Fhir.FhirPath.Validator
             _compiler = new FhirPathCompiler(symbolTable);
         }
 
-        public static IEnumerable<object[]> R4Expressions
+        public static IEnumerable<object[]> R5Expressions
         {
             get
             {
@@ -36,6 +36,7 @@ namespace Test.Fhir.FhirPath.Validator
                     "http://hl7.org/fhir/SearchParameter/Observation-component-value-canonical",
                     "http://hl7.org/fhir/SearchParameter/Observation-value-canonical",
                     "http://hl7.org/fhir/SearchParameter/Observation-value-markdown",
+                    "http://hl7.org/fhir/SearchParameter/AdverseEvent-substance", // use of "as" on a collection
                 };
                 var knownBadSearchParams = new[] {
                     "http://hl7.org/fhir/SearchParameter/Observation-value-quantity",
@@ -97,10 +98,9 @@ namespace Test.Fhir.FhirPath.Validator
         }
 
         [TestMethod]
-        [DynamicData(nameof(R4Expressions))]
-        public void R4Expr(string type, string key, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, string url, ModelInfo.SearchParamDefinition spd)
+        [DynamicData(nameof(R5Expressions))]
+        public void R5Expr(string type, string key, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, string url, ModelInfo.SearchParamDefinition spd)
         {
-            // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
             Console.WriteLine($"Context: {type}");
             Console.WriteLine($"Search Param Name: {key}");
             Console.WriteLine($"Search Param Type: {searchType}");
