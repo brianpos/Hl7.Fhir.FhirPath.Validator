@@ -38,6 +38,36 @@ namespace Test.Fhir.FhirPath.Validator
         }
 
         [TestMethod]
+        public void TestMethodWhereNonBooleanArguments()
+        {
+            string expression = "contact.telecom.where('phone').system";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(Patient));
+            var pe = _compiler.Parse(expression);
+            Console.WriteLine("---------");
+            pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsFalse(visitor.Outcome.Success);
+        }
+
+        [TestMethod]
+        public void TestMethodWhereNonBooleanCollectionArguments()
+        {
+            string expression = "identifier.where(type.coding.code='MR').value.first()";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(Patient));
+            var pe = _compiler.Parse(expression);
+            Console.WriteLine("---------");
+            pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsFalse(visitor.Outcome.Success);
+        }
+
+        [TestMethod]
         public void TestMethodCombine()
         {
             string expression = "name.select(given.join(' ').combine(family).join(', '))";

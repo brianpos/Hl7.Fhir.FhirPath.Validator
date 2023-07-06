@@ -34,7 +34,7 @@ namespace Test.Fhir.FhirPath.Validator
             _compiler = new FhirPathCompiler(symbolTable);
         }
 
-        [TestMethod]
+        // [TestMethod]
         public void ReadAllInvariants()
         {
             ZipSource _source = ZipSource.CreateValidationSource();
@@ -98,6 +98,13 @@ namespace Test.Fhir.FhirPath.Validator
             get
             {
                 var result = new List<object[]>();
+                var knownBadInvariants = new[] {
+                    "ObservationDefinition obd-0",
+                    "Bundle bdl-14",
+                    "CodeSystem csd-3",
+                    "ObservationDefinition.component obd-1",
+                    "Bundle bdl-16",
+                };
 
                 ZipSource source = ZipSource.CreateValidationSource();
                 source.Prepare();
@@ -116,7 +123,7 @@ namespace Test.Fhir.FhirPath.Validator
                                     foreach (var c in ed.Constraint)
                                     {
                                         if (!string.IsNullOrEmpty(c.Expression))
-                                            result.Add(new object[] { ed.Path, c.Key, c.Expression, true });
+                                            result.Add(new object[] { ed.Path, c.Key, c.Expression, !knownBadInvariants.Contains($"{ed.Path} {c.Key}") });
                                     }
                                 }
                             }

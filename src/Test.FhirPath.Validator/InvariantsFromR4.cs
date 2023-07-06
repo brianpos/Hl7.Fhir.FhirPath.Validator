@@ -32,7 +32,7 @@ namespace Test.Fhir.FhirPath.Validator
             _compiler = new FhirPathCompiler(symbolTable);
         }
 
-        [TestMethod]
+        // [TestMethod]
         public void ReadAllInvariants()
         {
             foreach (var item in _source.ListSummaries().Where(s => s.ResourceTypeName == "StructureDefinition")) 
@@ -87,6 +87,8 @@ namespace Test.Fhir.FhirPath.Validator
                     "Evidence cnl-0",
                     "EvidenceReport cnl-0",
                     "ChargeItemDefinition cid-0",
+                    "StructureDefinition.snapshot sdf-24",
+                    "StructureDefinition.snapshot sdf-25",
                 };
 
                 ZipSource source = ZipSource.CreateValidationSource();

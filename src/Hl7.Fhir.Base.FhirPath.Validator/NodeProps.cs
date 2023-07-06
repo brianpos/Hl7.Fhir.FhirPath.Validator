@@ -14,10 +14,10 @@ namespace Hl7.Fhir.FhirPath.Validator
 {
     public struct NodeProps
     {
-        public NodeProps(ClassMapping classMapping, PropertyMapping propMap = null)
+        public NodeProps(ClassMapping classMapping, PropertyMapping propMap = null, bool forceCollection = false)
         {
             ClassMapping = classMapping;
-            IsCollection = propMap?.IsCollection == true;
+            IsCollection = forceCollection || propMap?.IsCollection == true;
             PropertyMapping = propMap;
         }
 
@@ -29,6 +29,12 @@ namespace Hl7.Fhir.FhirPath.Validator
         {
             // The property mapping isn't brought forward
             return new NodeProps(ClassMapping) { IsCollection = true };
+        }
+
+        public NodeProps AsSingle()
+        {
+            // The property mapping isn't brought forward
+            return new NodeProps(ClassMapping) { IsCollection = false };
         }
     }
 }
