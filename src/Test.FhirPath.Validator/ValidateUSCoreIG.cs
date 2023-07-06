@@ -209,7 +209,6 @@ namespace Test.Fhir.FhirPath.Validator
             Assert.AreEqual("boolean", r.ToString(), "Invariants must return a boolean");
         }
 
-
         public static IEnumerable<object[]> InvariantsInChCoreIG
         {
             get

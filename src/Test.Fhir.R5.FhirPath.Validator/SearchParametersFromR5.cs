@@ -20,6 +20,9 @@ namespace Test.Fhir.FhirPath.Validator
         [TestInitialize]
         public void Init()
         {
+            // include all the conformance types
+            _mi.Import(typeof(StructureDefinition).Assembly);
+
             Hl7.Fhir.FhirPath.ElementNavFhirExtensions.PrepareFhirSymbolTableFunctions();
             SymbolTable symbolTable = new(FhirPathCompiler.DefaultSymbolTable);
             _compiler = new FhirPathCompiler(symbolTable);
