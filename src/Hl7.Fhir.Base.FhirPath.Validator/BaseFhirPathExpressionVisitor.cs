@@ -348,7 +348,6 @@ namespace Hl7.Fhir.FhirPath.Validator
                     var validResultTypes = focus.Types.Where(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck));
                     if (!validResultTypes.Any())
                     {
-                        System.Diagnostics.Trace.WriteLine($"Expression included an 'as' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}");
                         var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                         {
                             Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
@@ -466,7 +465,6 @@ namespace Hl7.Fhir.FhirPath.Validator
             }
             else
             {
-                System.Diagnostics.Trace.WriteLine($"Unhandled function {function.FunctionName}");
                 var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                 {
                     Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Warning,
@@ -482,7 +480,6 @@ namespace Hl7.Fhir.FhirPath.Validator
             {
                 if (props.FirstOrDefault() != null && props.FirstOrDefault()?.ToString() != "boolean")
                 {
-                    System.Diagnostics.Trace.WriteLine($"{function.FunctionName} must have a boolean first argument, detected {props.FirstOrDefault()}");
                     var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                     {
                         Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
@@ -498,7 +495,6 @@ namespace Hl7.Fhir.FhirPath.Validator
             {
                 if (props.FirstOrDefault()?.ToString() != "boolean")
                 {
-                    System.Diagnostics.Trace.WriteLine($"{function.FunctionName} must have a boolean first argument, detected {props.FirstOrDefault()}");
                     var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                     {
                         Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
@@ -841,7 +837,6 @@ namespace Hl7.Fhir.FhirPath.Validator
             }
             if (!propFound)
             {
-                System.Diagnostics.Trace.WriteLine($"prop '{ce.ChildName}' not found");
                 var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                 {
                     Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
@@ -890,7 +885,6 @@ namespace Hl7.Fhir.FhirPath.Validator
                     var possibleTypeNames = leftResult.Types.Select(t => t.ClassMapping.Name);
                     if (!leftResult.Types.Any(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck)))
                     {
-                        System.Diagnostics.Trace.WriteLine($"Expression included an 'is' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}");
                         var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                         {
                             Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
@@ -916,7 +910,6 @@ namespace Hl7.Fhir.FhirPath.Validator
                     var validResultTypes = leftResult.Types.Where(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck));
                     if (!validResultTypes.Any())
                     {
-                        System.Diagnostics.Trace.WriteLine($"Expression included an 'as' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}");
                         var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                         {
                             Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
@@ -962,7 +955,6 @@ namespace Hl7.Fhir.FhirPath.Validator
                 // Validate that neither of the arguments are collections
                 if (leftResult.IsCollection() != rightResult.IsCollection())
                 {
-                    System.Diagnostics.Trace.WriteLine($"Operator '{be.Op}' can experience unexpected behaviours when used with a collection");
                     var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                     {
                         Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
