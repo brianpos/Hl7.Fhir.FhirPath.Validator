@@ -78,10 +78,10 @@ namespace Hl7.Fhir.FhirPath.Validator
 
         public bool IncludeParseTreeDiagnostics { get; set; } = false;
 
-        public IEnumerable<OperationOutcome.IssueComponent> Validate(string type, string key, string expression, SearchParamType searchType, string url, VersionAgnosticSearchParameter spd)
+        public IEnumerable<OperationOutcome.IssueComponent> Validate(string type, string code, string expression, SearchParamType searchType, string url, VersionAgnosticSearchParameter spd)
         {
             //Console.WriteLine($"Context: {type}");
-            //Console.WriteLine($"Search Param Name: {key}");
+            //Console.WriteLine($"Search Param Name: {code}");
             //Console.WriteLine($"Search Param Type: {searchType}");
             //Console.WriteLine($"Expression:\r\n{expression}");
             //Console.WriteLine($"Canonical:\r\n{url}");
@@ -94,7 +94,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                 visitor.AddInputType(t);
                 visitor.RegisterVariable("resource", t);
             }
-            return VerifyExpression(t, expression, searchType, spd, visitor);
+            return VerifyExpression(t, code, expression, searchType, spd, visitor);
         }
 
         const string ErrorNamespace = "http://fhirpath-lab.com/CodeSystem/search-exp-errors";
@@ -102,7 +102,7 @@ namespace Hl7.Fhir.FhirPath.Validator
         readonly static Coding UnknownReturnType = new(ErrorNamespace, "SE0002", "Cannot evaluate return type of expression");
         readonly static Coding CannotResolveCanonical = new(ErrorNamespace, "SE0003", "Cannot resolve canonical for composite expression");
 
-        private IEnumerable<OperationOutcome.IssueComponent> VerifyExpression(Type resourceType, string expression, SearchParamType searchType, VersionAgnosticSearchParameter spd, BaseFhirPathExpressionVisitor visitor)
+        private IEnumerable<OperationOutcome.IssueComponent> VerifyExpression(Type resourceType, string code, string expression, SearchParamType searchType, VersionAgnosticSearchParameter spd, BaseFhirPathExpressionVisitor visitor)
         {
             List<OperationOutcome.IssueComponent> results = new List<OperationOutcome.IssueComponent>();
             var pe = _compiler.Parse(expression);
@@ -116,7 +116,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 
             string diagnostics = $"Expression: {expression}\r\nReturn type: {r}";
             if (IncludeParseTreeDiagnostics)
-                diagnostics += $"\r\nParse Tree:\r\n{visitor}";
+                diagnostics += $"\r\nParse Tree:\r\n{visitor.ToString().Replace("\r\n\r\n", "\r\n")}";
 
             AssertIsTrue(results, UnknownReturnType, r.ToString().Length > 0, "Unable to determine the return type of the expression", diagnostics);
             foreach (var returnType in r.ToString().Replace("[]", "").Replace(" ", "").Split(','))
@@ -149,8 +149,8 @@ namespace Hl7.Fhir.FhirPath.Validator
                         foreach (var cp in spd.Component)
                         {
                             // resolve the composite canonical to work out what type it should be
-                            var componentSearchParameterType = _resolveSearchParameter(cp.Definition)?.Type;
-                            AssertIsTrue(results, CannotResolveCanonical, componentSearchParameterType != null, $"Failed to resolve component URL: {cp.Definition}", diagnostics);
+                            var componentSearchParameter = _resolveSearchParameter(cp.Definition);
+                            AssertIsTrue(results, CannotResolveCanonical, componentSearchParameter?.Type != null, $"Failed to resolve component URL: {cp.Definition}", diagnostics);
                             foreach (var type in r.Types)
                             {
                                 var visitorComponent = new BaseFhirPathExpressionVisitor(_mi, _supportedResources, _openTypes);
@@ -159,8 +159,9 @@ namespace Hl7.Fhir.FhirPath.Validator
                                 visitorComponent.AddInputType(type.ClassMapping);
                                 results.AddRange(VerifyExpression(
                                     resourceType,
+                                    componentSearchParameter.Code,
                                     cp.Expression,
-                                    componentSearchParameterType.Value,
+                                    componentSearchParameter.Type,
                                     null,
                                     visitorComponent));
                             }
@@ -179,7 +180,7 @@ namespace Hl7.Fhir.FhirPath.Validator
         {
             if (!testResult)
             {
-                Console.WriteLine(message);
+                // Console.WriteLine(message);
                 var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                 {
                     Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
