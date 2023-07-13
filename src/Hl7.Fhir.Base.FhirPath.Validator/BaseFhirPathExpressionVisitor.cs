@@ -410,10 +410,10 @@ namespace Hl7.Fhir.FhirPath.Validator
                         bForceCollections = true;
                 }
                 // 
-                foreach (var t in props)
-                {
-                    System.Diagnostics.Trace.WriteLine($"select params: {t}");
-                }
+                //foreach (var t in props)
+                //{
+                //    System.Diagnostics.Trace.WriteLine($"select params: {t}");
+                //}
                 if (props.Count() == 1)
                 {
                     foreach (var t in props.First().Types)
@@ -599,7 +599,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 
         private void VisitRepeatFunction(FunctionCallExpression expression, FhirPathVisitorProps result)
         {
-            _repeatChildren = new Dictionary<ChildExpression, OperationOutcome.IssueComponent?>();
+            _repeatChildren = new Dictionary<ChildExpression, OperationOutcome.IssueComponent>();
 
             // Special handling for repeat,
             // iteratively select types using the expressions we
@@ -760,7 +760,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                 if (childProp != null)
                 {
                     // _stack.Push()
-                    System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {String.Join(",", childProp.FhirType.Select(v => v.Name).ToArray())}");
+                    // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {String.Join(",", childProp.FhirType.Select(v => v.Name).ToArray())}");
 
                     if (childProp.Choice == ChoiceType.ResourceChoice)
                     {
@@ -779,7 +779,22 @@ namespace Hl7.Fhir.FhirPath.Validator
                             }
                             else
                             {
-                                System.Diagnostics.Trace.WriteLine($"class {childProp.ImplementingType} not found");
+                                // System.Diagnostics.Trace.WriteLine($"class {childProp.ImplementingType} not found");
+                                var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                                {
+                                    Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                                    Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+                                    Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"class {childProp.ImplementingType} not found" }
+                                };
+                                if (expression.Location != null)
+                                    issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+                                if (_repeatChildren != null)
+                                {
+                                    if (!_repeatChildren.ContainsKey(ce))
+                                        _repeatChildren.Add(ce, issue);
+                                }
+                                else
+                                    Outcome.AddIssue(issue);
                             }
                         }
                     }
@@ -814,7 +829,22 @@ namespace Hl7.Fhir.FhirPath.Validator
                             }
                             else
                             {
-                                System.Diagnostics.Trace.WriteLine($"class {childProp.ImplementingType} not found");
+                                // System.Diagnostics.Trace.WriteLine($"class {childProp.ImplementingType} not found");
+                                var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                                {
+                                    Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                                    Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+                                    Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"class {childProp.ImplementingType} not found" }
+                                };
+                                if (expression.Location != null)
+                                    issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+                                if (_repeatChildren != null)
+                                {
+                                    if (!_repeatChildren.ContainsKey(ce))
+                                        _repeatChildren.Add(ce, issue);
+                                }
+                                else
+                                    Outcome.AddIssue(issue);
                             }
 
                         }
