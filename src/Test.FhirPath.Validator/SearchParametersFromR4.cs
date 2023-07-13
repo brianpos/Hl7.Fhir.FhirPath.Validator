@@ -8,6 +8,7 @@ using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
 using System.Collections.Generic;
+using Hl7.Fhir.Utility;
 
 namespace Test.Fhir.FhirPath.Validator
 {
@@ -116,6 +117,25 @@ namespace Test.Fhir.FhirPath.Validator
             }
         }
 
+        VersionAgnosticSearchParameter ToVaSpd(ModelInfo.SearchParamDefinition spd)
+        {
+            return new VersionAgnosticSearchParameter()
+            {
+                Type = spd.Type,
+                Expression = spd.Expression,
+                Url = spd.Url,
+                Resource = spd.Resource,
+                Name = spd.Name,
+                Target = spd.Target?.Select(t => t.GetLiteral()).ToArray(),
+                Component = spd.Component?.Select(c => new SearchParamComponent()
+                {
+                    Definition = c.Definition,
+                    Expression = c.Expression,
+                }).ToArray(),
+            };
+        }
+
+
         [TestMethod]
         [DynamicData(nameof(R4Expressions))]
         public void R4Expr(string type, string key, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, string url, ModelInfo.SearchParamDefinition spd)
@@ -126,15 +146,34 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine($"Expression:\r\n{expression}");
             Console.WriteLine($"Canonical:\r\n{url}");
             Console.WriteLine("---------");
-            var visitor = new FhirPathExpressionVisitor();
-            var t = _mi.GetTypeForFhirType(type);
-            if (t != null)
-            {
-                visitor.RegisterVariable("context", t);
-                visitor.AddInputType(t);
-                visitor.RegisterVariable("resource", t);
-            }
-            VerifyExpression(t, expression, searchType, expectSuccessOutcome, expectValidSearch, spd, visitor);
+            SearchExpressionValidator v = new SearchExpressionValidator(ModelInspector.ForAssembly(typeof(Patient).Assembly),
+                  Hl7.Fhir.Model.ModelInfo.SupportedResources,
+                  Hl7.Fhir.Model.ModelInfo.OpenTypes,
+                  (url) =>
+                  {
+                      return ModelInfo.SearchParameters.Where(sp => sp.Url == url)
+                      .Select(v => ToVaSpd(v))
+                      .FirstOrDefault();
+                  });
+            v.IncludeParseTreeDiagnostics = true;
+            var issues = v.Validate(type, key, expression, searchType, url, ToVaSpd(spd));
+            var outcome = new OperationOutcome();
+            outcome.Issue.AddRange(issues);
+            Console.WriteLine(outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            if (expectSuccessOutcome && expectValidSearch)
+                Assert.IsTrue(outcome.Success);
+            else
+                Assert.IsFalse(outcome.Success);
+
+            //var visitor = new FhirPathExpressionVisitor();
+            //var t = _mi.GetTypeForFhirType(type);
+            //if (t != null)
+            //{
+            //    visitor.RegisterVariable("context", t);
+            //    visitor.AddInputType(t);
+            //    visitor.RegisterVariable("resource", t);
+            //}
+            //VerifyExpression(t, expression, searchType, expectSuccessOutcome, expectValidSearch, spd, visitor);
         }
 
         private void VerifyExpression(Type resourceType, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, ModelInfo.SearchParamDefinition spd, FhirPathExpressionVisitor visitor)
