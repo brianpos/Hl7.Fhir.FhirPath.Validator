@@ -46,7 +46,7 @@ namespace Test.Fhir.FhirPath.Validator
                     "http://hl7.org/fhir/SearchParameter/Observation-component-value-canonical",
                     "http://hl7.org/fhir/SearchParameter/MedicinalProductDefinition-characteristic",
                     "http://hl7.org/fhir/SearchParameter/Observation-combo-value-quantity",
-
+                    
                     // Bad composites
                     "http://hl7.org/fhir/SearchParameter/Device-code-value-concept",
                     "http://hl7.org/fhir/SearchParameter/DeviceDefinition-specification-version",
@@ -59,7 +59,7 @@ namespace Test.Fhir.FhirPath.Validator
                     "http://hl7.org/fhir/SearchParameter/TestScript-scope-artifact-phase",
 
                     // this one isn't really bad, we don't resolve the extension to discover if the value is restricted
-                    "http://hl7.org/fhir/SearchParameter/CareTeam-name", 
+                    "http://hl7.org/fhir/SearchParameter/CareTeam-name",
                 };
                 var result = new List<object[]>();
                 foreach (var spd in ModelInfo.SearchParameters)
@@ -112,9 +112,9 @@ namespace Test.Fhir.FhirPath.Validator
             if (t != null)
             {
                 visitor.RegisterVariable("context", t);
-            visitor.AddInputType(t);
+                visitor.AddInputType(t);
                 visitor.RegisterVariable("resource", t);
-        }
+            }
             VerifyExpression(t, expression, searchType, expectSuccessOutcome, expectValidSearch, spd, visitor);
         }
 

@@ -131,7 +131,7 @@ namespace Test.Fhir.FhirPath.Validator
             if (t != null)
             {
                 visitor.RegisterVariable("context", t);
-            visitor.AddInputType(t);
+                visitor.AddInputType(t);
                 visitor.RegisterVariable("resource", t);
             }
             VerifyExpression(t, expression, searchType, expectSuccessOutcome, expectValidSearch, spd, visitor);
