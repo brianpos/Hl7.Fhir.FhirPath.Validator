@@ -87,5 +87,17 @@ namespace Test.Fhir.FhirPath.Validator
         {
             VerifyConstant("10 'mg' | 4 days", "Quantity");
         }
+
+        [TestMethod]
+        public void VerifyTypeConstant()
+        {
+            VerifyConstant("deceased.as(boolean)", "boolean");
+        }
+
+        [TestMethod]
+        public void VerifyTypeConstant2()
+        {
+            VerifyConstant("deceased.ofType(boolean)", "boolean");
+        }
     }
 }
