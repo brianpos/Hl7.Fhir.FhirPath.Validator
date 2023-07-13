@@ -201,7 +201,7 @@ namespace Test.Fhir.FhirPath.Validator
         [TestMethod]
         public void TestAsFunction()
         {
-            string expression = "(name as HumanName).given";
+            string expression = "deceased as boolean";
             Console.WriteLine(expression);
             var visitor = new FhirPathExpressionVisitor();
             visitor.AddInputType(typeof(Patient));
@@ -211,7 +211,7 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success, "Expected failure");
-            Assert.AreEqual("string[]", r.ToString());
+            Assert.AreEqual("boolean", r.ToString());
         }
 
         [TestMethod]
