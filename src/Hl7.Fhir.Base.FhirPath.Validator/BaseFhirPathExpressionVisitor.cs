@@ -264,6 +264,33 @@ namespace Hl7.Fhir.FhirPath.Validator
             "comparable",
         }.ToArray();
 
+        private readonly string[] stringFocusFuncs = new[] 
+        {
+            // Section 6.6.7
+            "binary.&",
+            // Section 5.7 in the spec (CI build)
+            "encode",
+            "decode",
+            "escape",
+            "unescape",
+            "trim",
+            "split",
+            "join",
+            // Section 5.6 in the spec (normative)
+            "indexOf",
+            "substring",
+            "startsWith",
+            "endsWith",
+            "contains",
+            "upper",
+            "lower",
+            "replace",
+            "matches",
+            "replaceMatches",
+            "length",
+            "toChars",
+        }; 
+
         private readonly string[] stringFuncs = new[]
         {
             "toString",
@@ -326,8 +353,38 @@ namespace Hl7.Fhir.FhirPath.Validator
 
         private void DeduceReturnType(FunctionCallExpression function, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> props, FhirPathVisitorProps outputProps)
         {
+            if (stringFocusFuncs.Contains(function.FunctionName))
+            {
+                // these string functions all have to work on an actual type of string too
+                if (!focus.CanBeOfType("string")
+                    && !focus.CanBeOfType("code")
+                    && !focus.CanBeOfType("markdown")
+                    && !focus.CanBeOfType("id")
+                    && !focus.CanBeOfType("uri")
+                    && !focus.CanBeOfType("url")
+                    && !focus.CanBeOfType("canonical")
+                    && !focus.CanBeOfType("uuid")
+                    && !focus.CanBeOfType("oid"))
+                {
+                    var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                    {
+                        Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                        Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
+                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"String function '{function.FunctionName}' is not supported on {focus}" }
+                    };
+                    if (function.Location != null)
+                        issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+                    Outcome.AddIssue(issue);
+                }
+            }
+            
             if (stringFuncs.Contains(function.FunctionName))
-                outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.FhirString));
+            {
+                if (function.FunctionName == "toChars")
+                    outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.FhirString), true);
+                else
+                    outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.FhirString));
+            }
             else if (function.FunctionName == "is")
             {
                 // Check this before the boolfuncs tests

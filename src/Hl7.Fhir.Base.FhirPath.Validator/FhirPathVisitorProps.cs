@@ -38,6 +38,13 @@ namespace Hl7.Fhir.FhirPath.Validator
             }).Distinct());
         }
 
+        public bool CanBeOfType(string typeName)
+        {
+            if (Types.Any(v => v.ClassMapping.Name == typeName))
+                return true;
+            return false;
+        }
+
         public bool IsCollection()
         {
             if (Types.Any(v => v.IsCollection == true))

@@ -210,8 +210,40 @@ namespace Test.Fhir.FhirPath.Validator
             var r = pe.Accept(visitor);
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
-            Assert.IsTrue(visitor.Outcome.Success, "Expected failure");
+            Assert.IsTrue(visitor.Outcome.Success, "Expected success");
             Assert.AreEqual("boolean", r.ToString());
+        }
+
+        [TestMethod]
+        public void TestStringFuncOnDate()
+        {
+            string expression = "birthDate.length()";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(Patient));
+            var pe = _compiler.Parse(expression);
+            Console.WriteLine("---------");
+            var r = pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsFalse(visitor.Outcome.Success, "Expected failure");
+            Assert.AreEqual("integer", r.ToString());
+        }
+
+        [TestMethod]
+        public void TestStringFuncOnCanonical()
+        {
+            string expression = "questionnaire.length()";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(QuestionnaireResponse));
+            var pe = _compiler.Parse(expression);
+            Console.WriteLine("---------");
+            var r = pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsTrue(visitor.Outcome.Success, "Expected success");
+            Assert.AreEqual("integer", r.ToString());
         }
 
         [TestMethod]
