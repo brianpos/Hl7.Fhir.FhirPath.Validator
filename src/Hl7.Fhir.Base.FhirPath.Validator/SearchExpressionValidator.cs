@@ -192,6 +192,9 @@ namespace Hl7.Fhir.FhirPath.Validator
             }
         }
 
+        // This list has been cross referenced with:
+        // https://github.com/GinoCanessa/fhir-candle/blob/dev/src/FhirStore.CommonVersioned/Search/SearchDefinitions.cs
+
         readonly string[] QuantityTypes = {
             "Quantity",
             "Money",
@@ -211,30 +214,44 @@ namespace Hl7.Fhir.FhirPath.Validator
             "ContactPoint",
             "uri",
             "canonical",
+            "oid",
+            "uri",
+            "url",
+            "uuid",
         };
 
         readonly string[] StringTypes = {
+            "id",
             "markdown",
             "string",
             "Address",
             "HumanName",
+            "xhtml",
         };
 
         readonly string[] NumberTypes = {
             "decimal",
             "integer",
+            "unsignedInt",
+            "positiveInt",
+            "integer64",
         };
 
         readonly string[] ReferenceTypes = {
             "Reference",
             "canonical",
             "uri",
+            "url",
+            "oid",
+            "uuid",
         };
 
         readonly string[] UriTypes = {
             "uri",
             "url",
             "canonical",
+            "oid",
+            "uuid",
         };
 
         readonly string[] DateTypes = {
