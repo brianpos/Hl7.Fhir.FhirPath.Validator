@@ -38,7 +38,15 @@ namespace Test.Fhir.FhirPath.Validator
         public void ReadAllInvariants()
         {
             ZipSource _source = ZipSource.CreateValidationSource();
-            foreach (var item in _source.ListSummaries().Where(s => s.ResourceTypeName == "StructureDefinition"))
+            _source.Prepare();
+            if (_source.ListSummaries().Count() == 0)
+            {
+                // Need to re-create the set!
+                System.IO.Directory.Delete(_source.ExtractPath);
+				_source = ZipSource.CreateValidationSource();
+				_source.Prepare();
+			}
+			foreach (var item in _source.ListSummaries().Where(s => s.ResourceTypeName == "StructureDefinition"))
             {
                 try
                 {
@@ -160,7 +168,7 @@ namespace Test.Fhir.FhirPath.Validator
 
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
-            Assert.IsTrue(visitor.Outcome.Success == expectSuccess);
+            Assert.IsTrue((visitor.Outcome.Success && visitor.Outcome.Warnings == 0) == expectSuccess);
             if (expectSuccess)
                 Assert.AreEqual("boolean", r.ToString(), "Invariants must return a boolean");
         }

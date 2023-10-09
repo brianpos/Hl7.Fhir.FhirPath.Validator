@@ -110,6 +110,7 @@ namespace Test.Fhir.FhirPath.Validator
                     "http://hl7.org/fhir/us/core/StructureDefinition/us-core-smokingstatus us-core-3",
                     "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab us-core-4",
                     "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-clinical-result us-core-3",
+                    "http://hl7.org/fhir/us/core/StructureDefinition/us-core-practitionerrole us-core-13",
                 };
 
                 return InvariantsInIG("hl7.fhir.us.core", "6.1.0", knownBadInvariants);
@@ -135,7 +136,7 @@ namespace Test.Fhir.FhirPath.Validator
 
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
-            Assert.IsTrue(visitor.Outcome.Success == expectSuccess);
+            Assert.IsTrue((visitor.Outcome.Success && visitor.Outcome.Warnings == 0) == expectSuccess);
             Assert.AreEqual("boolean", r.ToString(), "Invariants must return a boolean");
         }
 
@@ -145,6 +146,7 @@ namespace Test.Fhir.FhirPath.Validator
             {
                 var knownBadInvariants = new[] {
                     "http://hl7.org/fhir/us/core/StructureDefinition/us-core-smokingstatus us-core-3",
+                    "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-task sdc-t1",
                 };
 
                 return InvariantsInIG("hl7.fhir.uv.sdc", "3.0.0", knownBadInvariants);
@@ -214,7 +216,7 @@ namespace Test.Fhir.FhirPath.Validator
             get
             {
                 var knownBadInvariants = new[] {
-                    "http://hl7.org/fhir/us/core/StructureDefinition/us-core-smokingstatus us-core-3",
+                    "http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-patient ch-pat-3",
                 };
 
                 return InvariantsInIG("ch.fhir.ig.ch-core", "4.0.0-ballot", knownBadInvariants);
@@ -224,6 +226,41 @@ namespace Test.Fhir.FhirPath.Validator
         [TestMethod]
         [DynamicData(nameof(InvariantsInChCoreIG))]
         public void VerifyChCoreExpression(string type, string key, string expression, bool expectSuccess, string canonical)
+        {
+            // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
+            Console.WriteLine($"Context: {type}");
+            Console.WriteLine($"Canonical: {canonical}");
+            Console.WriteLine($"Invariant key: {key}");
+            Console.WriteLine($"Expression:\r\n{expression}");
+            Console.WriteLine("---------");
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.SetContext(type);
+            var pe = _compiler.Parse(expression);
+            var r = pe.Accept(visitor);
+            Console.WriteLine($"Result: {r}");
+            Console.WriteLine("---------");
+
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsTrue(visitor.Outcome.Success == expectSuccess);
+            Assert.AreEqual("boolean", r.ToString(), "Invariants must return a boolean");
+        }
+
+        public static IEnumerable<object[]> InvariantsInSdohClinicalCareIG
+        {
+            get
+            {
+                var knownBadInvariants = new[] {
+                    "http://hl7.org/fhir/us/core/StructureDefinition/us-core-smokingstatus us-core-3",
+                };
+
+                return InvariantsInIG("hl7.fhir.us.sdoh-clinicalcare", "dev", knownBadInvariants);
+            }
+        }
+
+        [TestMethod]
+        [DynamicData(nameof(InvariantsInSdohClinicalCareIG))]
+        public void VerifySdohClinicalCareExpression(string type, string key, string expression, bool expectSuccess, string canonical)
         {
             // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
             Console.WriteLine($"Context: {type}");

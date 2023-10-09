@@ -6,6 +6,9 @@ using Hl7.Fhir.Serialization;
 using Hl7.Fhir.Model;
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Hl7.Fhir.ElementModel;
+using Hl7.Fhir.FhirPath;
+using System.Linq;
 
 namespace Test.Fhir.FhirPath.Validator
 {
@@ -40,28 +43,60 @@ namespace Test.Fhir.FhirPath.Validator
         }
 
         [TestMethod]
+        public void ResolveDemo()
+        {
+            ElementNavFhirExtensions.PrepareFhirSymbolTableFunctions();
+            var sr = new ServiceRequest
+            {
+                Subject = new ResourceReference
+                {
+                    Reference = "Patient/1",
+                }
+            }.ToTypedElement();
+            // FhirPathCompiler.DefaultSymbolTable.Add(new CallSignature("where", typeof(IEnumerable<ITypedElement>), typeof(object), typeof(bool)), runWhere);
+
+            var context = new FhirEvaluationContext(sr);
+            // Mock a ElementResolver only applicable to this unit test
+            context.ElementResolver = (s) =>
+            {
+                return new Patient
+                {
+                    Id = "1"
+                }.ToTypedElement();
+            };
+            var values = sr.Select("ServiceRequest.subject.where(resolve() is Patient)", context);
+            Assert.AreEqual(1, values.Count());
+            var fhirValueProvider = values.First().Annotation<IFhirValueProvider>();
+            Assert.IsNotNull(fhirValueProvider);
+            Assert.IsNotNull(fhirValueProvider.FhirValue);
+            var r = fhirValueProvider.FhirValue as ResourceReference;
+            Assert.IsNotNull(r);
+            Assert.AreEqual("Patient/1", r.Reference);
+        }
+
+        [TestMethod]
         public void VerifyBooleanConstant()
         {
-            VerifyConstant("true | false", "boolean");
+            VerifyConstant("true | false", "boolean[]");
         }
 
         [TestMethod]
         public void VerifyStringConstant()
         {
-            VerifyConstant("'test string' | 'urn:oid:3.4.5.6.7.8'", "string");
+            VerifyConstant("'test string' | 'urn:oid:3.4.5.6.7.8'", "string[]");
         }
 
 
         [TestMethod]
         public void VerifyIntegerConstant()
         {
-            VerifyConstant("0 | 45", "integer");
+            VerifyConstant("0 | 45", "integer[]");
         }
 
         [TestMethod]
         public void VerifyDecimalConstant()
         {
-            VerifyConstant("0.0 | 3.14159265", "decimal");
+            VerifyConstant("0.0 | 3.14159265", "decimal[]");
         }
 
         [TestMethod]
@@ -85,7 +120,7 @@ namespace Test.Fhir.FhirPath.Validator
         [TestMethod]
         public void VerifyQuantityConstant()
         {
-            VerifyConstant("10 'mg' | 4 days", "Quantity");
+            VerifyConstant("10 'mg' | 4 days", "Quantity[]");
         }
 
         [TestMethod]
