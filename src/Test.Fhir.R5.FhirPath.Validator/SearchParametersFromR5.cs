@@ -33,9 +33,6 @@ namespace Test.Fhir.FhirPath.Validator
             get
             {
                 var knownBadOutcomes = new[] {
-                    "http://hl7.org/fhir/SearchParameter/Observation-component-value-canonical",
-                    "http://hl7.org/fhir/SearchParameter/Observation-value-canonical",
-                    "http://hl7.org/fhir/SearchParameter/Observation-value-markdown",
                     "http://hl7.org/fhir/SearchParameter/AdverseEvent-substance", // use of "as" on a collection
                 };
                 var knownBadSearchParams = new[] {
@@ -127,7 +124,7 @@ namespace Test.Fhir.FhirPath.Validator
 
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
-            Assert.IsTrue(visitor.Outcome.Success == expectSuccessOutcome);
+            Assert.IsTrue((visitor.Outcome.Success && visitor.Outcome.Warnings == 0) == expectSuccessOutcome);
 
             if (expectValidSearch)
             {

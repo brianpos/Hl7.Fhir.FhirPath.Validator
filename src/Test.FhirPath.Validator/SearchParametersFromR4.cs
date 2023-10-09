@@ -51,22 +51,16 @@ namespace Test.Fhir.FhirPath.Validator
                     "http://hl7.org/fhir/SearchParameter/Composition-related-id",
                 };
                 var knownBadSearchParams = new[] {
-                    "http://hl7.org/fhir/SearchParameter/clinical-date",
-                    "http://hl7.org/fhir/SearchParameter/CarePlan-activity-date",
-                    "http://hl7.org/fhir/SearchParameter/MedicinalProductDefinition-characteristic",
                     "http://hl7.org/fhir/SearchParameter/ClinicalUseDefinition-contraindication",
                     "http://hl7.org/fhir/SearchParameter/ClinicalUseDefinition-contraindication-reference",
                     "http://hl7.org/fhir/SearchParameter/ClinicalUseDefinition-effect",
                     "http://hl7.org/fhir/SearchParameter/ClinicalUseDefinition-effect-reference",
                     "http://hl7.org/fhir/SearchParameter/ClinicalUseDefinition-indication",
                     "http://hl7.org/fhir/SearchParameter/ClinicalUseDefinition-indication-reference",
-                    "http://hl7.org/fhir/SearchParameter/Consent-source-reference",
                     "http://hl7.org/fhir/SearchParameter/DocumentReference-relationship",
                     "http://hl7.org/fhir/SearchParameter/Ingredient-manufacturer",
                     "http://hl7.org/fhir/SearchParameter/Observation-combo-value-quantity",
                     "http://hl7.org/fhir/SearchParameter/Observation-component-value-quantity",
-                    "http://hl7.org/fhir/SearchParameter/Observation-value-quantity",
-                    "http://hl7.org/fhir/SearchParameter/RiskAssessment-probability",
                 };
                 var result = new List<object[]>();
                 foreach (var spd in ModelInfo.SearchParameters)
@@ -80,6 +74,14 @@ namespace Test.Fhir.FhirPath.Validator
                         // which then fails if you try to perform static analysis on other resource types
                         if (spd.Url == "http://hl7.org/fhir/SearchParameter/clinical-date")
                             spd.Expression = "AllergyIntolerance.recordedDate | CarePlan.period | CareTeam.period | ClinicalImpression.date | Composition.date | Consent.dateTime | DiagnosticReport.effective | Encounter.period | EpisodeOfCare.period | FamilyMemberHistory.date | Flag.period | (Immunization.occurrence as dateTime) | List.date | Observation.effective | Procedure.performed | (RiskAssessment.occurrence as dateTime) | SupplyRequest.authoredOn";
+                        if (spd.Url == "http://hl7.org/fhir/SearchParameter/clinical-date")
+                            spd.Expression = "AllergyIntolerance.recordedDate | CarePlan.period | CareTeam.period | ClinicalImpression.date | Composition.date | Consent.dateTime | DiagnosticReport.effective | Encounter.period | EpisodeOfCare.period | FamilyMemberHistory.date | Flag.period | (Immunization.occurrence as dateTime) | List.date | Observation.effective | Procedure.performed | (RiskAssessment.occurrence as dateTime) | SupplyRequest.authoredOn";
+                        if (spd.Url == "http://hl7.org/fhir/SearchParameter/Observation-code-value-date" && spd.Component[1].Expression == "value.as(DateTime) | value.as(Period)")
+                            spd.Component = new Hl7.Fhir.Model.ModelInfo.SearchParamComponent[]
+                            {
+                                new ModelInfo.SearchParamComponent("http://hl7.org/fhir/SearchParameter/clinical-code", "code"),
+                                new ModelInfo.SearchParamComponent("http://hl7.org/fhir/SearchParameter/Observation-value-date", "value.as(dateTime) | value.as(Period)")
+                            };
 
                         // Workaround for http://hl7.org/fhir/SearchParameter/conformance-context using "as" on collections
                         if (spd.Url == "http://hl7.org/fhir/SearchParameter/conformance-context")
@@ -161,9 +163,9 @@ namespace Test.Fhir.FhirPath.Validator
             outcome.Issue.AddRange(issues);
             Console.WriteLine(outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             if (expectSuccessOutcome && expectValidSearch)
-                Assert.IsTrue(outcome.Success);
+                Assert.IsTrue(outcome.Success && outcome.Warnings == 0);
             else
-                Assert.IsFalse(outcome.Success);
+                Assert.IsFalse(outcome.Success && outcome.Warnings == 0);
 
             //var visitor = new FhirPathExpressionVisitor();
             //var t = _mi.GetTypeForFhirType(type);
@@ -248,7 +250,89 @@ namespace Test.Fhir.FhirPath.Validator
             }
         }
 
-        readonly string[] QuantityTypes = {
+
+		[TestMethod]
+		public void TestSearchParameterMultipleTypesExtensionValue()
+		{
+			SearchExpressionValidator v = new SearchExpressionValidator(ModelInspector.ForAssembly(typeof(Patient).Assembly),
+				  Hl7.Fhir.Model.ModelInfo.SupportedResources,
+				  Hl7.Fhir.Model.ModelInfo.OpenTypes,
+				  (url) =>
+				  {
+					  return ModelInfo.SearchParameters.Where(sp => sp.Url == url)
+					  .Select(v => ToVaSpd(v))
+					  .FirstOrDefault();
+				  });
+			v.IncludeParseTreeDiagnostics = true;
+            var spd = new VersionAgnosticSearchParameter() 
+            {
+                Code = "test",
+				Expression = "Patient.extension('http://example.org/test').value",
+				Type = SearchParamType.String,
+				Url = "http://test.com/test"
+			};
+			var issues = v.Validate("Patient", spd.Code, spd.Expression, spd.Type, spd.Url, spd);
+			var outcome = new OperationOutcome();
+			outcome.Issue.AddRange(issues);
+			Console.WriteLine(outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(outcome.Success && outcome.Warnings == 0);
+		}
+
+		[TestMethod]
+		public void TestSearchParameterMultipleTypesFailureCase()
+		{
+			SearchExpressionValidator v = new SearchExpressionValidator(ModelInspector.ForAssembly(typeof(Patient).Assembly),
+				  Hl7.Fhir.Model.ModelInfo.SupportedResources,
+				  Hl7.Fhir.Model.ModelInfo.OpenTypes,
+				  (url) =>
+				  {
+					  return ModelInfo.SearchParameters.Where(sp => sp.Url == url)
+					  .Select(v => ToVaSpd(v))
+					  .FirstOrDefault();
+				  });
+			v.IncludeParseTreeDiagnostics = true;
+			var spd = new VersionAgnosticSearchParameter()
+			{
+				Code = "test",
+				Expression = "Patient.deceased",
+				Type = SearchParamType.Quantity,
+				Url = "http://test.com/test"
+			};
+			var issues = v.Validate("Patient", spd.Code, spd.Expression, spd.Type, spd.Url, spd);
+			var outcome = new OperationOutcome();
+			outcome.Issue.AddRange(issues);
+			Console.WriteLine(outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(!outcome.Success && outcome.Warnings == 0);
+		}
+
+		[TestMethod]
+		public void TestSearchParameterMultipleTypesSuccessCase()
+		{
+			SearchExpressionValidator v = new SearchExpressionValidator(ModelInspector.ForAssembly(typeof(Patient).Assembly),
+				  Hl7.Fhir.Model.ModelInfo.SupportedResources,
+				  Hl7.Fhir.Model.ModelInfo.OpenTypes,
+				  (url) =>
+				  {
+					  return ModelInfo.SearchParameters.Where(sp => sp.Url == url)
+					  .Select(v => ToVaSpd(v))
+					  .FirstOrDefault();
+				  });
+			v.IncludeParseTreeDiagnostics = true;
+			var spd = new VersionAgnosticSearchParameter()
+			{
+				Code = "test",
+				Expression = "Patient.deceased",
+				Type = SearchParamType.Date,
+				Url = "http://test.com/test"
+			};
+			var issues = v.Validate("Patient", spd.Code, spd.Expression, spd.Type, spd.Url, spd);
+			var outcome = new OperationOutcome();
+			outcome.Issue.AddRange(issues);
+			Console.WriteLine(outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(outcome.Success && outcome.Warnings == 0);
+		}
+
+		readonly string[] QuantityTypes = {
             "Quantity",
             "Money",
             "Range",

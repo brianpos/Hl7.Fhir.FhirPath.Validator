@@ -1,5 +1,6 @@
 ﻿using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using Hl7.FhirPath;
 using System;
 using System.Collections.Generic;
@@ -101,10 +102,30 @@ namespace Hl7.Fhir.FhirPath.Validator
         readonly static Coding SearchTypeMismatch = new(ErrorNamespace, "SE0001", "Search type data mismatch");
         readonly static Coding UnknownReturnType = new(ErrorNamespace, "SE0002", "Cannot evaluate return type of expression");
         readonly static Coding CannotResolveCanonical = new(ErrorNamespace, "SE0003", "Cannot resolve canonical for composite expression");
+        readonly static Coding EmptyExpression = new(ErrorNamespace, "SE0004", "fhirpath `expression` is empty (and cannot be validated)");
 
         private IEnumerable<OperationOutcome.IssueComponent> VerifyExpression(Type resourceType, string code, string expression, SearchParamType searchType, VersionAgnosticSearchParameter spd, BaseFhirPathExpressionVisitor visitor)
         {
             List<OperationOutcome.IssueComponent> results = new List<OperationOutcome.IssueComponent>();
+
+            if (string.IsNullOrEmpty(expression))
+            {
+                // an empty expression is kinda pointless trying to validate
+                // if the type is not special, return an error
+                if (searchType != SearchParamType.Special)
+                {
+                    var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                    {
+                        Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                        Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = EmptyExpression.Display },
+                    };
+                    issue.Details.Coding.Add(EmptyExpression);
+                    results.Add(issue);
+                    return results;
+                }
+            }
+
             var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
             // Console.WriteLine($"Result: {r}");
@@ -114,35 +135,37 @@ namespace Hl7.Fhir.FhirPath.Validator
             // Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             results.AddRange(visitor.Outcome.Issue);
 
-            string diagnostics = $"Expression: {expression}\r\nReturn type: {r}";
+            string diagnostics = $"Resource: {resourceType?.Name} - {code}\r\nExpression: {expression}\r\nReturn type: {r}";
             if (IncludeParseTreeDiagnostics)
                 diagnostics += $"\r\nParse Tree:\r\n{visitor.ToString().Replace("\r\n\r\n", "\r\n")}";
 
             AssertIsTrue(results, UnknownReturnType, r.ToString().Length > 0, "Unable to determine the return type of the expression", diagnostics);
-            foreach (var returnType in r.ToString().Replace("[]", "").Replace(" ", "").Split(','))
+			var resultTypeChecks = new List<OperationOutcome.IssueComponent>();
+            bool hasAtLeastOneValidType = false;
+			foreach (var returnType in r.ToString().Replace("[]", "").Replace(" ", "").Split(','))
             {
                 switch (searchType)
                 {
                     case SearchParamType.Number:
-                        AssertIsTrue(results, SearchTypeMismatch, NumberTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}", diagnostics);
+						hasAtLeastOneValidType = AssertIsTrue(resultTypeChecks, SearchTypeMismatch, NumberTypes.Contains(returnType), $"Search Type {searchType} not supported on datatype: {returnType}", diagnostics) || hasAtLeastOneValidType;
                         break;
                     case SearchParamType.Date:
-                        AssertIsTrue(results, SearchTypeMismatch, DateTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}", diagnostics);
+						hasAtLeastOneValidType = AssertIsTrue(resultTypeChecks, SearchTypeMismatch, DateTypes.Contains(returnType), $"Search Type {searchType} not supported on datatype: {returnType}", diagnostics) || hasAtLeastOneValidType;
                         break;
                     case SearchParamType.String:
-                        AssertIsTrue(results, SearchTypeMismatch, StringTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}", diagnostics);
+						hasAtLeastOneValidType = AssertIsTrue(resultTypeChecks, SearchTypeMismatch, StringTypes.Contains(returnType), $"Search Type {searchType} not supported on datatype: {returnType}", diagnostics) || hasAtLeastOneValidType;
                         break;
                     case SearchParamType.Token:
-                        AssertIsTrue(results, SearchTypeMismatch, TokenTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}", diagnostics);
+						hasAtLeastOneValidType = AssertIsTrue(resultTypeChecks, SearchTypeMismatch, TokenTypes.Contains(returnType), $"Search Type {searchType} not supported on datatype: {returnType}", diagnostics) || hasAtLeastOneValidType;
                         break;
                     case SearchParamType.Reference:
-                        AssertIsTrue(results, SearchTypeMismatch, ReferenceTypes.Contains(returnType) || _mi.IsKnownResource(returnType), $"Search Type mismatch {searchType} type on {returnType}", diagnostics);
+						hasAtLeastOneValidType = AssertIsTrue(resultTypeChecks, SearchTypeMismatch, ReferenceTypes.Contains(returnType) || _mi.IsKnownResource(returnType), $"Search Type {searchType} not supported on datatype: {returnType}", diagnostics) || hasAtLeastOneValidType;
                         break;
                     case SearchParamType.Quantity:
-                        AssertIsTrue(results, SearchTypeMismatch, QuantityTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}", diagnostics);
+						hasAtLeastOneValidType = AssertIsTrue(resultTypeChecks, SearchTypeMismatch, QuantityTypes.Contains(returnType), $"Search Type {searchType} not supported on datatype: {returnType}", diagnostics) || hasAtLeastOneValidType;
                         break;
                     case SearchParamType.Uri:
-                        AssertIsTrue(results, SearchTypeMismatch, UriTypes.Contains(returnType), $"Search Type mismatch {searchType} type on {returnType}", diagnostics);
+						hasAtLeastOneValidType = AssertIsTrue(resultTypeChecks, SearchTypeMismatch, UriTypes.Contains(returnType), $"Search Type {searchType} not supported on datatype: {returnType}", diagnostics) || hasAtLeastOneValidType;
                         break;
                     case SearchParamType.Composite:
                         // Need to feed this back into itself to verify
@@ -151,32 +174,55 @@ namespace Hl7.Fhir.FhirPath.Validator
                             // resolve the composite canonical to work out what type it should be
                             var componentSearchParameter = _resolveSearchParameter(cp.Definition);
                             AssertIsTrue(results, CannotResolveCanonical, componentSearchParameter?.Type != null, $"Failed to resolve component URL: {cp.Definition}", diagnostics);
-                            foreach (var type in r.Types)
+                            if (componentSearchParameter != null)
                             {
-                                var visitorComponent = new BaseFhirPathExpressionVisitor(_mi, _supportedResources, _openTypes);
-                                visitorComponent.RegisterVariable("resource", resourceType);
-                                visitorComponent.RegisterVariable("context", type.ClassMapping);
-                                visitorComponent.AddInputType(type.ClassMapping);
-                                results.AddRange(VerifyExpression(
-                                    resourceType,
-                                    componentSearchParameter.Code,
-                                    cp.Expression,
-                                    componentSearchParameter.Type,
-                                    null,
-                                    visitorComponent));
+                                foreach (var type in r.Types)
+                                {
+                                    var visitorComponent = new BaseFhirPathExpressionVisitor(_mi, _supportedResources, _openTypes);
+                                    visitorComponent.RegisterVariable("resource", resourceType);
+                                    visitorComponent.RegisterVariable("context", type.ClassMapping);
+                                    visitorComponent.AddInputType(type.ClassMapping);
+                                    // components - need to put in the location/expression fields
+                                    var compositeIssues = VerifyExpression(
+                                        resourceType,
+                                        componentSearchParameter.Code,
+                                        cp.Expression,
+                                        componentSearchParameter.Type,
+                                        null,
+                                        visitorComponent);
+                                    if (!compositeIssues.Any())
+                                        hasAtLeastOneValidType = true;
+									results.AddRange(compositeIssues);
+                                }
                             }
                         }
                         break;
                     case SearchParamType.Special:
-                        // No real way to verify this special type
-                        // Assert.Inconclusive($"Need to verify search {searchType} type on {returnType}");
-                        break;
+						// No real way to verify this special type
+						// Assert.Inconclusive($"Need to verify search {searchType} type on {returnType}");
+						hasAtLeastOneValidType = true;
+						break;
                 }
             }
-            return results;
+            if (!hasAtLeastOneValidType)
+            {
+                // Merge them into the one message
+                var message = $"Search Type `{searchType}` not supported on datatype(s): {r.ToString()}";
+				var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+				{
+					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+					Details = new Hl7.Fhir.Model.CodeableConcept(SearchTypeMismatch.System, SearchTypeMismatch.Code, SearchTypeMismatch.Display, message),
+					Diagnostics = diagnostics
+				};
+				results.Add(issue);
+				results.AddRange(resultTypeChecks.Where(r => !r.Details.Coding.Any(c => c.System == SearchTypeMismatch.System && c.Code == SearchTypeMismatch.Code)));
+			}
+
+			return results;
         }
 
-        private void AssertIsTrue(List<OperationOutcome.IssueComponent> results, Coding detail, bool testResult, string message, string diagnostics)
+        private bool AssertIsTrue(List<OperationOutcome.IssueComponent> results, Coding detail, bool testResult, string message, string diagnostics)
         {
             if (!testResult)
             {
@@ -190,7 +236,8 @@ namespace Hl7.Fhir.FhirPath.Validator
                 };
                 results.Add(issue);
             }
-        }
+            return testResult;
+		}
 
         // This list has been cross referenced with:
         // https://github.com/GinoCanessa/fhir-candle/blob/dev/src/FhirStore.CommonVersioned/Search/SearchDefinitions.cs
@@ -221,6 +268,7 @@ namespace Hl7.Fhir.FhirPath.Validator
         };
 
         readonly string[] StringTypes = {
+            // need to add in code etc, the string compat types
             "id",
             "markdown",
             "string",
