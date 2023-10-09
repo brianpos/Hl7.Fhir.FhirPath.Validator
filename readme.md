@@ -21,7 +21,7 @@ The library contains:
 
 Coming Soon:
 
-* Unit test verifying all expressions in a FHIR npm package
+* Unit test verifying all expressions in a FHIR npm package (this is now possible using the [UploadFIG](https://github.com/brianpos/uploadfig) dotnet tool)
 * Support to validate expressions in FHIR Questionnaires (R4B only to start)
 
 Known Issues/incomplete funcitonality:

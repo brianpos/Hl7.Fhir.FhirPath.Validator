@@ -16,15 +16,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Hl7.Fhir.Specification.Data.R5" Version="5.2.0" />
-    <PackageReference Include="Hl7.Fhir.Specification.R5" Version="5.2.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.2" />
-    <PackageReference Include="MSTest.TestAdapter" Version="3.0.4" />
-    <PackageReference Include="MSTest.TestFramework" Version="3.0.4" />
+    <PackageReference Include="Hl7.Fhir.Specification.Data.R5" Version="5.3.0" />
+    <PackageReference Include="Hl7.Fhir.Specification.R5" Version="5.3.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.1.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.9" />
     <ProjectReference Include="..\Hl7.Fhir.R5.FhirPath.Validator\Hl7.Fhir.R5.FhirPath.Validator.csproj" />
   </ItemGroup>
 
