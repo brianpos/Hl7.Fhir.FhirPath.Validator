@@ -112,6 +112,7 @@ namespace Test.Fhir.FhirPath.Validator
                     "CodeSystem csd-3",
                     "ObservationDefinition.component obd-1",
                     "Bundle bdl-16",
+                    "Questionnaire que-2", // the invariant really should be item.descendants().linkId.isDistinct() as doing it from the root can walk into all the contained content too (and trips in there)
                 };
 
                 ZipSource source = ZipSource.CreateValidationSource();
@@ -154,9 +155,6 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine($"Context: {path}");
             Console.WriteLine($"Invariant key: {key}");
             Console.WriteLine($"Expression:\r\n{expression}");
-
-            if (expression.Contains("descendants()"))
-                Assert.Inconclusive("Checking does not support descendants()");
 
             Console.WriteLine("---------");
             var visitor = new FhirPathExpressionVisitor();

@@ -24,7 +24,7 @@ namespace Hl7.Fhir.FhirPath.Validator
             RegisterVariable("ucum", typeof(Hl7.Fhir.Model.FhirString));
             RegisterVariable("sctt", typeof(Hl7.Fhir.Model.FhirString));
 
-            _table = new SymbolTable(mi);
+            _table = new SymbolTable(mi, SupportedResources, OpenTypes);
         }
 
         private SymbolTable _table;
@@ -390,7 +390,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                     var rts = fd.SupportedContexts.Select(sc => sc.ReturnType).Distinct().ToList();
                     if (!rts.Any() && fd.GetReturnType != null)
                     {
-                        foreach (var nprop in fd.GetReturnType(fd, props, Outcome))
+                        foreach (var nprop in fd.GetReturnType(fd, focus, props, Outcome))
                             outputProps.Types.Add(nprop);
 					}
                     else
@@ -857,7 +857,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                         {
                             Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
                             Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Value,
-                            Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' is the choice type, remove the type from the end - {ctCP.Name}" }
+                            Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' is the choice type, remove the type from the end - {t.ClassMapping.Name}.{ctCP.Name}" }
                         };
                         if (expression.Location != null)
                             issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };

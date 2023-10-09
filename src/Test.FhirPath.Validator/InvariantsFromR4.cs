@@ -124,9 +124,6 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine($"Invariant key: {key}");
             Console.WriteLine($"Expression:\r\n{expression}");
 
-            if (expression.Contains("descendants()"))
-                Assert.Inconclusive("Checking does not support descendants()");
-
             Console.WriteLine("---------");
             var visitor = new FhirPathExpressionVisitor();
             visitor.SetContext(path);

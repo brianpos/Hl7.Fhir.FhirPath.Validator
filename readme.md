@@ -25,7 +25,7 @@ Coming Soon:
 * Support to validate expressions in FHIR Questionnaires (R4B only to start)
 
 Known Issues/incomplete funcitonality:
-* missing functions: intersect, exclude, single, iif, descendants
+* missing functions: intersect, exclude, single, iif
 * type conversions http://hl7.org/fhirpath/N1/#conversion
 	* toBoolean
 	* toInteger
