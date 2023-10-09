@@ -23,7 +23,11 @@ namespace Hl7.Fhir.FhirPath.Validator
             // Register some FHIR Standard variables (const strings)
             RegisterVariable("ucum", typeof(Hl7.Fhir.Model.FhirString));
             RegisterVariable("sctt", typeof(Hl7.Fhir.Model.FhirString));
+
+            _table = new SymbolTable(mi);
         }
+
+        private SymbolTable _table;
 
         /// <summary>
         /// Set the Context of the expression to verify 
@@ -341,6 +345,11 @@ namespace Hl7.Fhir.FhirPath.Validator
             "tail",
             "intersect", // TODO: could validate that these types have overlap
             "exclude", // TODO: could validate that these types have overlap
+            "distinct",
+
+            // New additions in FHIR R5
+            "lowBoundary",
+            "highBoundary",
         }.ToArray();
 
         private readonly string[] mathFuncs = new[]
@@ -353,18 +362,49 @@ namespace Hl7.Fhir.FhirPath.Validator
 
         private void DeduceReturnType(FunctionCallExpression function, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> props, FhirPathVisitorProps outputProps)
         {
+            var fd = _table.Get(function.FunctionName);
+            if (fd != null)
+            {
+                // Perform any validations
+                foreach (var validation in fd.Validations)
+                {
+                    validation(fd, props, Outcome);
+                }
+
+                // check the context of the function
+                if (!fd.IsSupportedContext(focus))
+                {
+                    var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                    {
+                        Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                        Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
+                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' is not supported on context type '{focus}'" }
+                    };
+                    if (function.Location != null)
+                        issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+                    Outcome.AddIssue(issue);
+                }
+                else
+                {
+                    // At least this is supported
+                    var rts = fd.SupportedContexts.Select(sc => sc.ReturnType).Distinct().ToList();
+                    if (!rts.Any() && fd.GetReturnType != null)
+                    {
+                        foreach (var nprop in fd.GetReturnType(fd, props, Outcome))
+                            outputProps.Types.Add(nprop);
+					}
+                    else
+                    {
+                        foreach (var rt in rts)
+                            outputProps.Types.Add(new NodeProps(rt));
+                    }
+                }
+            }
+
             if (stringFocusFuncs.Contains(function.FunctionName))
             {
                 // these string functions all have to work on an actual type of string too
-                if (!focus.CanBeOfType("string")
-                    && !focus.CanBeOfType("code")
-                    && !focus.CanBeOfType("markdown")
-                    && !focus.CanBeOfType("id")
-                    && !focus.CanBeOfType("uri")
-                    && !focus.CanBeOfType("url")
-                    && !focus.CanBeOfType("canonical")
-                    && !focus.CanBeOfType("uuid")
-                    && !focus.CanBeOfType("oid"))
+                if (!focus.CanBeOfType("string"))
                 {
                     var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                     {
@@ -403,7 +443,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                     var isTypeToCheck = _mi.GetTypeForFhirType(ceTa.Value as string);
                     var possibleTypeNames = focus.Types.Select(t => t.ClassMapping.Name);
                     var validResultTypes = focus.Types.Where(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck));
-                    if (!validResultTypes.Any())
+                    if (!focus.CanBeOfType(ceTa.Value as string))
                     {
                         var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                         {
@@ -422,6 +462,22 @@ namespace Hl7.Fhir.FhirPath.Validator
                         {
                             outputProps.Types.Add(rt);
                         }
+                    }
+                }
+                if (function.FunctionName == "as")
+                {
+                    // Check the collection too
+                    if (focus.IsCollection())
+                    {
+                        var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                        {
+                            Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Warning,
+                            Code = Hl7.Fhir.Model.OperationOutcome.IssueType.MultipleMatches,
+                            Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' can experience unexpected runtime errors when used with a collection" },
+                        };
+                        if (function.Location != null)
+                            issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+                        Outcome.AddIssue(issue);
                     }
                 }
             }
@@ -520,13 +576,13 @@ namespace Hl7.Fhir.FhirPath.Validator
                     }
                 }
             }
-            else
+            else if (fd == null) // only warn if we didn't have a symbol table entry
             {
                 var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                 {
                     Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Warning,
                     Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
-                    Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Unhandled function {function.FunctionName}" }
+                    Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Unhandled function '{function.FunctionName}'" }
                 };
                 if (function.Location != null)
                     issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
@@ -603,7 +659,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                 return result;
             }
 
-            if (expressionFuncs.Contains(expression.FunctionName))
+			if (expressionFuncs.Contains(expression.FunctionName))
             {
                 if (expression.FunctionName == "select"
                     || expression.FunctionName == "where"
@@ -970,7 +1026,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                     // ceTa.Value
                     var isTypeToCheck = _mi.GetTypeForFhirType(ceTa.Value as string);
                     var possibleTypeNames = leftResult.Types.Select(t => t.ClassMapping.Name);
-                    if (!leftResult.Types.Any(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck)))
+                    if (!leftResult.Types.Any(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck)) && !leftResult.CanBeOfType(ceTa.Value as string))
                     {
                         var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                         {
@@ -1022,7 +1078,24 @@ namespace Hl7.Fhir.FhirPath.Validator
                 foreach (var t in leftResult.Types)
                     result.Types.Add(t);
                 foreach (var t in rightResult.Types)
-                    result.Types.Add(t);
+                {
+                    // Merge in the types (don't duplicate them)
+                    // if the same one is already in there, remove it and replace with a collection version.
+                    var et = result.Types.Where(tc => tc.ClassMapping.Name == t.ClassMapping.Name);
+                    if (et.Any())
+                    {
+                        var ct = et.First();
+                        if (!ct.IsCollection)
+                        {
+                            result.Types.Add(ct.AsCollection());
+                            result.Types.Remove(ct);
+                        }
+                    }
+                    else
+                    {
+                        result.Types.Add(t);
+                    }
+                }
             }
             else
             {
@@ -1044,9 +1117,9 @@ namespace Hl7.Fhir.FhirPath.Validator
                 {
                     var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
                     {
-                        Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                        Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Warning,
                         Code = Hl7.Fhir.Model.OperationOutcome.IssueType.MultipleMatches,
-                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Operator '{be.Op}' can experience unexpected behaviours when used with a collection" },
+                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Operator '{be.Op}' can experience unexpected runtime errors when used with a collection" },
                         Diagnostics = $"{leftResult} {be.Op} {rightResult}"
                     };
                     if (be.Location != null)
@@ -1061,8 +1134,8 @@ namespace Hl7.Fhir.FhirPath.Validator
         public override FhirPathVisitorProps VisitNewNodeListInit(NewNodeListInitExpression expression)
         {
             var r = new FhirPathVisitorProps();
-            Append("new NodeSet");
-            // appendType(expression);
+            Append("{}");
+            // There is no type information for this sub-expression
 
             IncrementTab();
             foreach (var element in expression.Contents)

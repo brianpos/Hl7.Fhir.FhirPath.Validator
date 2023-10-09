@@ -1,13 +1,9 @@
 ﻿using Hl7.Fhir.Introspection;
-using Hl7.Fhir.Support;
 using Hl7.Fhir.Utility;
-using Hl7.FhirPath.Expressions;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 
 namespace Hl7.Fhir.FhirPath.Validator
 {
@@ -38,11 +34,39 @@ namespace Hl7.Fhir.FhirPath.Validator
             }).Distinct());
         }
 
+        public string BaseType(string typeName)
+        {
+            return typeName switch
+            {
+                "System.Boolean" => "boolean",
+                "System.String" => "string",
+                "code" => "string",
+                "markdown" => "string",
+                "id" => "string",
+                "uri" => "string",
+                "url" => "string",
+                "canonical" => "string",
+                "uuid" => "string",
+                "oid" => "string",
+                _ => typeName
+            };
+        }
+
         public bool CanBeOfType(string typeName)
         {
             if (Types.Any(v => v.ClassMapping.Name == typeName))
                 return true;
+            // Also check if the base type of this is included
+            if (Types.Any(v => BaseType(v.ClassMapping.Name) == BaseType(typeName)))
+                return true;
             return false;
+        }
+
+        public IEnumerable<string> CanBeOfTypes(string typeName)
+        {
+            List<string> result = new List<string>();
+            result.AddRange(Types.Where(v => v.ClassMapping.Name == typeName || BaseType(v.ClassMapping.Name) == typeName).Select(v => v.ClassMapping.Name));
+            return result;
         }
 
         public bool IsCollection()
