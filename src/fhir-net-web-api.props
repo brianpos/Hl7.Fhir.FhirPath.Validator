@@ -5,7 +5,7 @@
     <Authors>Brian Postlethwaite (brian_pos@hotmail.com) and contributors</Authors>
     <Company>Brian Postlethwaite and contributors</Company>
     <Copyright>Copyright 2017+ Brian Postlethwaite and contributors  Contains materials (C) HL7 International</Copyright>
-    <PackageProjectUrl>https://github.com/brianpos/fhir-net-web-api</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/brianpos/Hl7.Fhir.FhirPath.Validator</PackageProjectUrl>
     <PackageIcon>icon-fhir-32.png</PackageIcon>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReleaseNotes>See http://brianpos.github.io/fhir-net-web-api/whats-new.html</PackageReleaseNotes>
