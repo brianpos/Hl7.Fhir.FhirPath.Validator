@@ -21,8 +21,10 @@ namespace Hl7.Fhir.FhirPath.Validator
             _openTypes = OpenTypes;
 
             // Register some FHIR Standard variables (const strings)
+			// http://hl7.org/fhir/fhirpath.html#vars
             RegisterVariable("ucum", typeof(Hl7.Fhir.Model.FhirString));
-            RegisterVariable("sctt", typeof(Hl7.Fhir.Model.FhirString));
+            RegisterVariable("sct", typeof(Hl7.Fhir.Model.FhirString));
+			RegisterVariable("loinc", typeof(Hl7.Fhir.Model.FhirString));
 
             _table = new SymbolTable(mi, SupportedResources, OpenTypes);
         }
