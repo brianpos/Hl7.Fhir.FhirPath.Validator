@@ -120,19 +120,27 @@ namespace Hl7.Fhir.FhirPath.Validator
         public void RegisterVariable(string name, Type type)
         {
             var cm = _mi.FindOrImportClassMapping(type);
-            if (cm != null && !variables.ContainsKey(name))
-            {
-                variables.Add(name, cm);
-            }
+            RegisterVariable(name, cm);
         }
+
         public void RegisterVariable(string name, ClassMapping cm)
         {
+            FhirPathVisitorProps types = new FhirPathVisitorProps();
             if (cm != null && !variables.ContainsKey(name))
             {
-                variables.Add(name, cm);
+                types.Types.Add(new NodeProps(cm));
+                variables.Add(name, types);
             }
         }
-        private readonly Dictionary<string, ClassMapping> variables = new();
+
+		public void RegisterVariable(string name, FhirPathVisitorProps types)
+        {
+			if (!variables.ContainsKey(name))
+            {
+				variables.Add(name, types);
+            }
+        }
+		private readonly Dictionary<string, FhirPathVisitorProps> variables = new();
 
         public override string ToString()
         {
@@ -1186,7 +1194,14 @@ namespace Hl7.Fhir.FhirPath.Validator
             if (variables.ContainsKey(expression.Name))
             {
                 _result.Append($"%{expression.Name}");
-                r.Types.Add(new NodeProps(variables[expression.Name]));
+                if (variables[expression.Name] != null)
+                {
+                    foreach (var vt in variables[expression.Name].Types)
+                    {
+                        r.Types.Add(vt);
+                    }
+                }
+                // r.Types.Add(new NodeProps(variables[expression.Name]));
                 _result.AppendLine($" : {r}");
                 return r;
             }

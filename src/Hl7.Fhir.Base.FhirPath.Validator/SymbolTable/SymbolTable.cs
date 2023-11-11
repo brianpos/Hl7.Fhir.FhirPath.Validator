@@ -29,13 +29,16 @@ namespace Hl7.Fhir.FhirPath.Validator
 			// Add(new FunctionItem("null", null));
 
 			Add(new FunctionDefinition("today", false, true) { GetReturnType = ReturnsDate }).Validations.Add(ValidateNoArguments);
-			Add(new FunctionDefinition("now", false, true) { GetReturnType = ReturnsDateTime }).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("now", false, true) { GetReturnType = Returns<FhirDateTime> }).Validations.Add(ValidateNoArguments);
 			Add(new FunctionDefinition("timeOfDay", false, true) { GetReturnType = ReturnsTime }).Validations.Add(ValidateNoArguments);
 
 			// Add(new FunctionDefinition("allTrue", true, false) { GetReturnType = ReturnsBoolean }).Validations.Add(ValidateNoArguments);
 			// Add(new FunctionDefinition("unary.-", false, true).AddContexts(mi, "integer-integer"));
 			// Add(new FunctionDefinition("unary.+", false, true).AddContexts(mi, "integer-integer"));
 			Add(new FunctionDefinition("descendants", true, false) { GetReturnType = ReturnsFromDescendants, SupportsContext = (props) => true }).Validations.Add(ValidateNoArguments);
+
+			// SDC additional functions
+			Add(new FunctionDefinition("answers", false, true) { GetReturnType = ReturnsAnswers }).Validations.Add(ValidateNoArguments);
 		}
 
 		public FunctionDefinition Add(FunctionDefinition item)
@@ -73,6 +76,19 @@ namespace Hl7.Fhir.FhirPath.Validator
 		NodeProps FromType(Type fhirType)
 		{
 			return new NodeProps(_mi.FindOrImportClassMapping(fhirType));
+		}
+
+		List<NodeProps> Returns<T>(FunctionDefinition item, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
+		{
+			// Result is just an integer
+			return FromType(typeof(T)).ToList();
+		}
+
+		List<NodeProps> ReturnsAnswers(FunctionDefinition item, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
+		{
+			var t = _mi.GetTypeForFhirType("QuestionnaireResponse#Answer");
+			// Result is just an integer
+			return FromType(t).AsCollection().ToList();
 		}
 
 		List<NodeProps> ReturnsDateTime(FunctionDefinition item, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
