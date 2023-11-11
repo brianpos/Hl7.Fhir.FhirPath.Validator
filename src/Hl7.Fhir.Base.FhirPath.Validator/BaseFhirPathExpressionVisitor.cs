@@ -20,13 +20,13 @@ namespace Hl7.Fhir.FhirPath.Validator
             _supportedResources = SupportedResources;
             _openTypes = OpenTypes;
 
-            // Register some FHIR Standard variables (const strings)
+			// Register some FHIR Standard variables (const strings)
 			// http://hl7.org/fhir/fhirpath.html#vars
-            RegisterVariable("ucum", typeof(Hl7.Fhir.Model.FhirString));
+			RegisterVariable("ucum", typeof(Hl7.Fhir.Model.FhirString));
             RegisterVariable("sct", typeof(Hl7.Fhir.Model.FhirString));
 			RegisterVariable("loinc", typeof(Hl7.Fhir.Model.FhirString));
 
-            _table = new SymbolTable(mi, SupportedResources, OpenTypes);
+			_table = new SymbolTable(mi, SupportedResources, OpenTypes);
         }
 
         private SymbolTable _table;
@@ -126,7 +126,7 @@ namespace Hl7.Fhir.FhirPath.Validator
         public void RegisterVariable(string name, ClassMapping cm)
         {
             FhirPathVisitorProps types = new FhirPathVisitorProps();
-            if (cm != null && !variables.ContainsKey(name))
+			if (cm != null && !variables.ContainsKey(name))
             {
                 types.Types.Add(new NodeProps(cm));
                 variables.Add(name, types);
@@ -134,12 +134,12 @@ namespace Hl7.Fhir.FhirPath.Validator
         }
 
 		public void RegisterVariable(string name, FhirPathVisitorProps types)
-        {
+		{
 			if (!variables.ContainsKey(name))
-            {
+			{
 				variables.Add(name, types);
-            }
-        }
+			}
+		}
 		private readonly Dictionary<string, FhirPathVisitorProps> variables = new();
 
         public override string ToString()
@@ -855,134 +855,138 @@ namespace Hl7.Fhir.FhirPath.Validator
             bool propFound = false;
             foreach (var t in rFocus.Types)
             {
-                var childProp = t.ClassMapping.FindMappedElementByName(ce.ChildName);
-                if (childProp == null)
+                // Check for children where the context isn't a fhir primitive (which don't have children)
+                if (!t.ClassMapping.IsFhirPrimitive || ce.ChildName == "id" || ce.ChildName == "extension")
                 {
-                    // Check if this is a choice type (using the choicename in the type is not valid)
-                    var ctCP = t.ClassMapping.FindMappedElementByChoiceName(ce.ChildName);
-                    if (ctCP != null)
+                    var childProp = t.ClassMapping.FindMappedElementByName(ce.ChildName);
+                    if (childProp == null)
                     {
-                        // report this as an error!!!
-                        var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                        // Check if this is a choice type (using the choicename in the type is not valid)
+                        var ctCP = t.ClassMapping.FindMappedElementByChoiceName(ce.ChildName);
+                        if (ctCP != null)
                         {
-                            Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
-                            Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Value,
-                            Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' is the choice type, remove the type from the end - {t.ClassMapping.Name}.{ctCP.Name}" }
-                        };
-                        if (expression.Location != null)
-                            issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
-                        if (_repeatChildren != null)
+                            // report this as an error!!!
+                            var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                            {
+                                Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                                Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Value,
+                                Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' is the choice type, remove the type from the end - {t.ClassMapping.Name}.{ctCP.Name}" }
+                            };
+                            if (expression.Location != null)
+                                issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+                            if (_repeatChildren != null)
+                            {
+                                if (!_repeatChildren.ContainsKey(ce))
+                                    _repeatChildren.Add(ce, issue);
+                            }
+                            else
+                                Outcome.AddIssue(issue);
+                        }
+                    }
+                    if (childProp != null)
+                    {
+                        // _stack.Push()
+                        // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {String.Join(",", childProp.FhirType.Select(v => v.Name).ToArray())}");
+
+                        if (childProp.Choice == ChoiceType.ResourceChoice)
                         {
-                            if (!_repeatChildren.ContainsKey(ce))
-                                _repeatChildren.Add(ce, issue);
+                            foreach (var rt in _supportedResources)
+                            {
+                                if (!_mi.IsKnownResource(rt))
+                                    continue;
+                                var cm = _mi.FindClassMapping(rt);
+                                if (cm != null)
+                                {
+                                    // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
+                                    r.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
+                                    propFound = true;
+                                    if (_repeatChildren?.ContainsKey(ce) == true)
+                                        _repeatChildren[ce] = null;
+                                }
+                                else
+                                {
+                                    // System.Diagnostics.Trace.WriteLine($"class {childProp.ImplementingType} not found");
+                                    var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                                    {
+                                        Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                                        Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+                                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"class {childProp.ImplementingType} not found" }
+                                    };
+                                    if (expression.Location != null)
+                                        issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+                                    if (_repeatChildren != null)
+                                    {
+                                        if (!_repeatChildren.ContainsKey(ce))
+                                            _repeatChildren.Add(ce, issue);
+                                    }
+                                    else
+                                        Outcome.AddIssue(issue);
+                                }
+                            }
+                        }
+                        else if (childProp.Choice == ChoiceType.DatatypeChoice)
+                        {
+                            foreach (var ft in childProp.FhirType)
+                            {
+                                var cm = _mi.FindOrImportClassMapping(ft);
+                                if (cm != null)
+                                {
+                                    if (ft.FullName == "Hl7.Fhir.Model.DataType" && t.ClassMapping.Name == "Extension")
+                                    {
+                                        // List the actual fhir types valid in extensions
+                                        foreach (var rt in _openTypes)
+                                        {
+                                            var cme = _mi.FindOrImportClassMapping(rt);
+                                            if (cme != null)
+                                            {
+                                                // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
+                                                r.Types.Add(new NodeProps(cme, childProp, rFocus.IsCollection()));
+                                                propFound = true;
+                                                if (_repeatChildren?.ContainsKey(ce) == true)
+                                                    _repeatChildren[ce] = null;
+                                            }
+                                        }
+                                        break;
+                                    }
+                                    r.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
+                                    propFound = true;
+                                    if (_repeatChildren?.ContainsKey(ce) == true)
+                                        _repeatChildren[ce] = null;
+                                }
+                                else
+                                {
+                                    // System.Diagnostics.Trace.WriteLine($"class {childProp.ImplementingType} not found");
+                                    var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                                    {
+                                        Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+                                        Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+                                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"class {childProp.ImplementingType} not found" }
+                                    };
+                                    if (expression.Location != null)
+                                        issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+                                    if (_repeatChildren != null)
+                                    {
+                                        if (!_repeatChildren.ContainsKey(ce))
+                                            _repeatChildren.Add(ce, issue);
+                                    }
+                                    else
+                                        Outcome.AddIssue(issue);
+                                }
+
+                            }
                         }
                         else
-                            Outcome.AddIssue(issue);
-                    }
-                }
-                if (childProp != null)
-                {
-                    // _stack.Push()
-                    // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {String.Join(",", childProp.FhirType.Select(v => v.Name).ToArray())}");
-
-                    if (childProp.Choice == ChoiceType.ResourceChoice)
-                    {
-                        foreach (var rt in _supportedResources)
                         {
-                            if (!_mi.IsKnownResource(rt))
-                                continue;
-                            var cm = _mi.FindClassMapping(rt);
-                            if (cm != null)
+                            foreach (var ct in childProp.FhirType)
                             {
-                                // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
-                                r.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
-                                propFound = true;
-                                if (_repeatChildren?.ContainsKey(ce) == true)
-                                    _repeatChildren[ce] = null;
-                            }
-                            else
-                            {
-                                // System.Diagnostics.Trace.WriteLine($"class {childProp.ImplementingType} not found");
-                                var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+                                var cm = _mi.FindOrImportClassMapping(ct);
+                                if (cm != null)
                                 {
-                                    Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
-                                    Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
-                                    Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"class {childProp.ImplementingType} not found" }
-                                };
-                                if (expression.Location != null)
-                                    issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
-                                if (_repeatChildren != null)
-                                {
-                                    if (!_repeatChildren.ContainsKey(ce))
-                                        _repeatChildren.Add(ce, issue);
+                                    r.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
+                                    propFound = true;
+                                    if (_repeatChildren?.ContainsKey(ce) == true)
+                                        _repeatChildren[ce] = null;
                                 }
-                                else
-                                    Outcome.AddIssue(issue);
-                            }
-                        }
-                    }
-                    else if (childProp.Choice == ChoiceType.DatatypeChoice)
-                    {
-                        foreach (var ft in childProp.FhirType)
-                        {
-                            var cm = _mi.FindOrImportClassMapping(ft);
-                            if (cm != null)
-                            {
-                                if (ft.FullName == "Hl7.Fhir.Model.DataType" && t.ClassMapping.Name == "Extension")
-                                {
-                                    // List the actual fhir types valid in extensions
-                                    foreach (var rt in _openTypes)
-                                    {
-                                        var cme = _mi.FindOrImportClassMapping(rt);
-                                        if (cme != null)
-                                        {
-                                            // System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
-                                            r.Types.Add(new NodeProps(cme, childProp, rFocus.IsCollection()));
-                                            propFound = true;
-                                            if (_repeatChildren?.ContainsKey(ce) == true)
-                                                _repeatChildren[ce] = null;
-                                        }
-                                    }
-                                    break;
-                                }
-                                r.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
-                                propFound = true;
-                                if (_repeatChildren?.ContainsKey(ce) == true)
-                                    _repeatChildren[ce] = null;
-                            }
-                            else
-                            {
-                                // System.Diagnostics.Trace.WriteLine($"class {childProp.ImplementingType} not found");
-                                var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
-                                {
-                                    Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
-                                    Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
-                                    Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"class {childProp.ImplementingType} not found" }
-                                };
-                                if (expression.Location != null)
-                                    issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
-                                if (_repeatChildren != null)
-                                {
-                                    if (!_repeatChildren.ContainsKey(ce))
-                                        _repeatChildren.Add(ce, issue);
-                                }
-                                else
-                                    Outcome.AddIssue(issue);
-                            }
-
-                        }
-                    }
-                    else
-                    {
-                        foreach (var ct in childProp.FhirType)
-                        {
-                            var cm = _mi.FindOrImportClassMapping(ct);
-                            if (cm != null)
-                            {
-                                r.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
-                                propFound = true;
-                                if (_repeatChildren?.ContainsKey(ce) == true)
-                                    _repeatChildren[ce] = null;
                             }
                         }
                     }
