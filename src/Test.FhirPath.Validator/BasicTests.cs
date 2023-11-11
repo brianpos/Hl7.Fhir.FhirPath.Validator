@@ -544,5 +544,71 @@ namespace Test.Fhir.FhirPath.Validator
                 r.ToString());
 			Assert.IsTrue(visitor.Outcome.Success);
 		}
+
+		[TestMethod]
+		public void TestIdentifierValue()
+		{
+			string expression = "value.startsWith('123')";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(FhirString));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsFalse(visitor.Outcome.Success);
+            Assert.AreEqual(2, visitor.Outcome.Errors);
+		}
+
+		[TestMethod]
+		public void TestCrossResourceExpression()
+		{
+			string expression = "CodeSystem.id.exists()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(ValueSet));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsFalse(visitor.Outcome.Success);
+			Assert.AreEqual(2, visitor.Outcome.Errors);
+		}
+
+		[TestMethod]
+		public void TestMethodAbs()
+		{
+			string expression = "(-5).abs() = 5";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			// this should fail as the today function does not require any parameters
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodCeiling()
+		{
+			string expression = "(+1.1).ceiling()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			// this should fail as the today function does not require any parameters
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
+		// Add in a test for how to handle validating an extension definition which leverages the contexts of the extensions.
 	}
 }

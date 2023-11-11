@@ -397,7 +397,17 @@ namespace Hl7.Fhir.FhirPath.Validator
                 else
                 {
                     // At least this is supported
-                    var rts = fd.SupportedContexts.Select(sc => sc.ReturnType).Distinct().ToList();
+                    IEnumerable<FunctionContext> contexts = fd.SupportedContexts;
+                    if (function is UnaryExpression)
+                    {
+                        if (props.Any())
+                            contexts = contexts.Where(c => props.Any(p => p.CanBeOfType(c.Type)));
+                    }
+                    else if (function is FunctionCallExpression)
+                    {
+						contexts = contexts.Where(c => focus.CanBeOfType(c.Type));
+					}
+					var rts = contexts.Select(sc => sc.ReturnType).Distinct().ToList();
                     if (!rts.Any() && fd.GetReturnType != null)
                     {
                         foreach (var nprop in fd.GetReturnType(fd, focus, props, Outcome))

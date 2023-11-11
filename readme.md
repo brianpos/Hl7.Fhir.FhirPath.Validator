@@ -19,39 +19,14 @@ The library contains:
 * Unit test verifying all the R4B/R5 search expressions provided by the Firely SDK
 * Unit test verifying all the R4B/R5 invariant expressions provided by the Hl7 SDK
 
-Coming Soon:
-
-* Unit test verifying all expressions in a FHIR npm package (this is now possible using the [UploadFIG](https://github.com/brianpos/uploadfig) dotnet tool)
-* Support to validate expressions in FHIR Questionnaires (R4B only to start)
-
 Known Issues/incomplete funcitonality:
 * missing functions: intersect, exclude, single, iif
-* type conversions http://hl7.org/fhirpath/N1/#conversion
-	* toBoolean
-	* toInteger
-	* toDate
-	* toDateTime
-	* toDecimal
-	* toQuantity
-	* toTime
-	* indexOf
 * length() doesn't check that context is a string
 * toChars() returns a string not string[]
-* Math functions
-	* abs
-	* ceiling
-	* exp
-	* floor
-	* ln
+* Math functions (argument checks)
 	* log
 	* power
 	* round
-	* sqrt
-	* truncate
-* Utility functions
-	* now()
-	* timeOfDay()
-	* today()
 * Comparisons don't check for type conversions, or that the types are compatible/same
 	* though does identify that the resulting type is boolean for downstream processing
 * Boolean logic operators should check that both sides are boolean type parameters

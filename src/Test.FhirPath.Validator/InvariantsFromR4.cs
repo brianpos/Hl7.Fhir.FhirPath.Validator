@@ -35,6 +35,15 @@ namespace Test.Fhir.FhirPath.Validator
         // [TestMethod]
         public void ReadAllInvariants()
         {
+			ZipSource _source = ZipSource.CreateValidationSource();
+			_source.Prepare();
+			if (_source.ListSummaries().Count() == 0)
+			{
+				// Need to re-create the set!
+				System.IO.Directory.Delete(_source.ExtractPath, true);
+				_source = ZipSource.CreateValidationSource();
+				_source.Prepare();
+			}
             foreach (var item in _source.ListSummaries().Where(s => s.ResourceTypeName == "StructureDefinition")) 
             {
                 var sd = _source.ResolveByUri(item.ResourceUri) as StructureDefinition;
@@ -89,6 +98,7 @@ namespace Test.Fhir.FhirPath.Validator
                     "ChargeItemDefinition cid-0",
                     "StructureDefinition.snapshot sdf-24",
                     "StructureDefinition.snapshot sdf-25",
+					"Ingredient ing-1",
                 };
 
                 ZipSource source = ZipSource.CreateValidationSource();

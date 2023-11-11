@@ -23,8 +23,17 @@ namespace Hl7.Fhir.FhirPath.Validator
 			Add(new FunctionDefinition("highBoundary").AddContexts(mi, "date-date,instant-instant,decimal-decimal,integer-integer,dateTime-dateTime,time-time,Quantity-Quantity"));
 
 			Add(new FunctionDefinition("length").AddContexts(mi, "string-integer")).Validations.Add(ValidateNoArguments);
-			Add(new FunctionDefinition("toQuantity").AddContexts(mi, "integer-Quantity,decimal-Quantity,string-Quantity,Quantity-Quantity,boolean-Quantity")).Validations.Add(ValidateNoArguments);
-			Add(new FunctionDefinition("toInteger").AddContexts(mi, "integer-integer,decimal-integer,string-integer,boolean-integer")).Validations.Add(ValidateNoArguments);
+
+			Add(new FunctionDefinition("toBoolean").AddContexts(mi, "boolean-boolean,integer-boolean,decimal-boolean,string-boolean")).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("toInteger").AddContexts(mi, "integer-integer,string-integer,boolean-integer")).Validations.Add(ValidateNoArguments);
+			// TODO: What about the `Instant` type here?
+			Add(new FunctionDefinition("toDate").AddContexts(mi, "string-date,date-date,dateTime-date")).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("toDateTime").AddContexts(mi, "string-dateTime,date-dateTime,dateTime-dateTime")).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("toDecimal").AddContexts(mi, "decimal-decimal,integer-decimal,string-decimal,boolean-decimal")).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("toQuantity").AddContexts(mi, "integer-Quantity,decimal-Quantity,string-Quantity,Quantity-Quantity,boolean-Quantity")); // can have an optional string argument for units
+			Add(new FunctionDefinition("toString").AddContexts(mi, "string-string,integer-string,decimal-string,date-string,dateTime-string,Time-string,Quantity-string")).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("toTime").AddContexts(mi, "time-time,string-time")).Validations.Add(ValidateNoArguments);
+
 			// Add(new FunctionItem("false", false));
 			// Add(new FunctionItem("null", null));
 
@@ -33,9 +42,21 @@ namespace Hl7.Fhir.FhirPath.Validator
 			Add(new FunctionDefinition("timeOfDay", false, true) { GetReturnType = ReturnsTime }).Validations.Add(ValidateNoArguments);
 
 			// Add(new FunctionDefinition("allTrue", true, false) { GetReturnType = ReturnsBoolean }).Validations.Add(ValidateNoArguments);
-			// Add(new FunctionDefinition("unary.-", false, true).AddContexts(mi, "integer-integer"));
-			// Add(new FunctionDefinition("unary.+", false, true).AddContexts(mi, "integer-integer"));
+			Add(new FunctionDefinition("unary.-", false, true).AddContexts(mi, "integer-integer,decimal-decimal"));
+			Add(new FunctionDefinition("unary.+", false, true).AddContexts(mi, "integer-integer,decimal-decimal"));
 			Add(new FunctionDefinition("descendants", true, false) { GetReturnType = ReturnsFromDescendants, SupportsContext = (props) => true }).Validations.Add(ValidateNoArguments);
+
+			// Math functions
+			Add(new FunctionDefinition("abs").AddContexts(mi, "integer-integer,decimal-decimal,Quantity-Quantity")).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("ceiling").AddContexts(mi, "integer-integer,decimal-integer")).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("exp").AddContexts(mi, "integer-decimal,decimal-decimal")).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("floor").AddContexts(mi, "integer-integer,decimal-integer")).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("ln").AddContexts(mi, "integer-decimal,decimal-decimal")).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("log").AddContexts(mi, "integer-decimal,decimal-decimal")); // requires a "base":decimal argument
+			Add(new FunctionDefinition("power").AddContexts(mi, "integer-integer,decimal-decimal")); // requires an exponent:integer|decimal argument
+			Add(new FunctionDefinition("round").AddContexts(mi, "decimal-decimal")); // requires a precision:integer argument
+			Add(new FunctionDefinition("sqrt").AddContexts(mi, "integer-decimal,decimal-decimal")).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("truncate").AddContexts(mi, "integer-integer,decimal-integer")).Validations.Add(ValidateNoArguments);
 
 			// SDC additional functions
 			Add(new FunctionDefinition("answers", false, true) { GetReturnType = ReturnsAnswers }).Validations.Add(ValidateNoArguments);

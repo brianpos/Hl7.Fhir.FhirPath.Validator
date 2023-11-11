@@ -181,7 +181,7 @@ namespace Test.Fhir.FhirPath.Validator
             get
             {
                 var knownBadInvariants = new[] {
-                    "http://hl7.org/fhir/us/core/StructureDefinition/us-core-smokingstatus us-core-3",
+					"http://hl7.org.au/fhir/StructureDefinition/identifier-routability inv-routability-preference",
                 };
 
                 return InvariantsInIG("hl7.fhir.au.base", "4.1.0", knownBadInvariants);

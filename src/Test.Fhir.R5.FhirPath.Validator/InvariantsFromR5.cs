@@ -42,7 +42,7 @@ namespace Test.Fhir.FhirPath.Validator
             if (_source.ListSummaries().Count() == 0)
             {
                 // Need to re-create the set!
-                System.IO.Directory.Delete(_source.ExtractPath);
+                System.IO.Directory.Delete(_source.ExtractPath, true);
 				_source = ZipSource.CreateValidationSource();
 				_source.Prepare();
 			}
