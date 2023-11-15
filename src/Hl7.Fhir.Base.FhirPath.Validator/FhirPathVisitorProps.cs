@@ -52,12 +52,18 @@ namespace Hl7.Fhir.FhirPath.Validator
             };
         }
 
-        public bool CanBeOfType(string typeName)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="typeName"></param>
+        /// <param name="IsCollection">If provided, the type must exactly mat</param>
+        /// <returns></returns>
+        public bool CanBeOfType(string typeName, bool SingleOnly = false)
         {
-            if (Types.Any(v => v.ClassMapping.Name == typeName))
+            if (Types.Any(v => v.ClassMapping.Name == typeName && (!SingleOnly || !v.IsCollection)))
                 return true;
             // Also check if the base type of this is included
-            if (Types.Any(v => BaseType(v.ClassMapping.Name) == BaseType(typeName)))
+            if (Types.Any(v => BaseType(v.ClassMapping.Name) == BaseType(typeName) && (!SingleOnly || !v.IsCollection)))
                 return true;
             return false;
         }

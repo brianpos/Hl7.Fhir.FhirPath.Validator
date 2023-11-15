@@ -340,7 +340,6 @@ namespace Hl7.Fhir.FhirPath.Validator
         {
             "where",
             "all",
-            "iif",
         }.ToArray();
 
         private readonly string[] passthroughFuncs = new[]
@@ -519,11 +518,6 @@ namespace Hl7.Fhir.FhirPath.Validator
                     else
                         outputProps.Types.Add(t);
                 }
-            }
-            else if (function.FunctionName == "iif")
-            {
-                // TODO: Test that the first parameter is always a boolean
-                // then return the union of the other 2 parameters
             }
             else if (function.FunctionName == "select")
             {

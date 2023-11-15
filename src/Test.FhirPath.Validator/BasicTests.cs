@@ -626,6 +626,113 @@ namespace Test.Fhir.FhirPath.Validator
 			Assert.IsTrue(visitor.Outcome.Success);
 		}
 
+		[TestMethod]
+		public void TestMethodIif()
+		{
+			string expression = "iif(true, 2, 'false')";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine($"Result Type: {r.ToString()}");
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			// this should fail as the today function does not require any parameters
+			Assert.IsTrue(visitor.Outcome.Success);
+            Assert.AreEqual("integer, string", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestMethodIifArgs()
+		{
+			string expression = "iif('4', 2, 'false')";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine($"Result Type: {r.ToString()}");
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			// this should fail as the today function does not require any parameters
+			Assert.IsFalse(visitor.Outcome.Success);
+			Assert.AreEqual("integer, string", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestMethodIifMoreBadArgs()
+		{
+			string expression = "iif(true | false, 2, 'false')";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine($"Result Type: {r.ToString()}");
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			// this should fail as the today function does not require any parameters
+			Assert.IsFalse(visitor.Outcome.Success);
+			Assert.AreEqual("integer, string", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestMethodIifSingleArg()
+		{
+			string expression = "iif('4', false)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine($"Result Type: {r.ToString()}");
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			// this should fail as the today function does not require any parameters
+			Assert.IsFalse(visitor.Outcome.Success);
+			Assert.AreEqual("boolean", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestMethodIif2StringsArgs()
+		{
+			string expression = "iif(true, 'yes', 'no')";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine($"Result Type: {r.ToString()}");
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			// this should fail as the today function does not require any parameters
+			Assert.IsTrue(visitor.Outcome.Success);
+			Assert.AreEqual("string", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestMethodIif2StringsArgsAgain()
+		{
+			string expression = "iif(true, 'yes', 'no' | 'maybe')";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine($"Result Type: {r.ToString()}");
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			// this should fail as the today function does not require any parameters
+			Assert.IsTrue(visitor.Outcome.Success);
+			Assert.AreEqual("string, string[]", r.ToString());
+		}
 		// Add in a test for how to handle validating an extension definition which leverages the contexts of the extensions.
 	}
 }

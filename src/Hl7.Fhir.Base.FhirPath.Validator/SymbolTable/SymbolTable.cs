@@ -41,6 +41,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			Add(new FunctionDefinition("today", false, true) { GetReturnType = ReturnsDate }).Validations.Add(ValidateNoArguments);
 			Add(new FunctionDefinition("now", false, true) { GetReturnType = Returns<FhirDateTime> }).Validations.Add(ValidateNoArguments);
 			Add(new FunctionDefinition("timeOfDay", false, true) { GetReturnType = ReturnsTime }).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("iif", false, true) { GetReturnType = IifReturnsType }).Validations.Add(ValidateRequiredBooleanFirstArgument);
 
 			// Add(new FunctionDefinition("allTrue", true, false) { GetReturnType = ReturnsBoolean }).Validations.Add(ValidateNoArguments);
 			Add(new FunctionDefinition("unary.-", false, true).AddContexts(mi, "integer-integer,decimal-decimal"));
@@ -129,6 +130,27 @@ namespace Hl7.Fhir.FhirPath.Validator
 		{
 			// Result is just an integer
 			return FromType(typeof(FhirBoolean)).ToList();
+		}
+
+		List<NodeProps> IifReturnsType(FunctionDefinition item, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
+		{
+			// Result type will be the union of the types of the args
+			var result = new List<NodeProps>();
+			if (args.Count() > 1)
+			{
+				foreach (var arg in args.Skip(1))
+				{
+					foreach (var t2 in arg.Types)
+					{
+						// This is different to other places, as these types don't need to mesh into eachother
+						if (!result.Any(t => t.ToString() == t2.ToString()))
+						{
+							result.Add(t2);
+						}
+					}
+				}
+			}
+			return result;
 		}
 
 		List<NodeProps> ReturnsTime(FunctionDefinition item, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
@@ -220,6 +242,37 @@ namespace Hl7.Fhir.FhirPath.Validator
 				//if (item.Location != null)
 				//	issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
 				outcome.Issue.Add(issue);
+			}
+		}
+		void ValidateRequiredBooleanFirstArgument(FunctionDefinition item, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
+		{
+			if (args?.Any() == false)
+			{
+				var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+				{
+					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{item.Name}' requires a boolean first parameter" }
+				};
+				//if (item.Location != null)
+				//	issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+				outcome.Issue.Add(issue);
+				return;
+			}
+
+			// We have some parameters, so lets check the first one for a boolean result!
+			if (!args.First().CanBeOfType("boolean", true))
+			{
+				var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+				{
+					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{item.Name}' requires a boolean first parameter" }
+				};
+				//if (item.Location != null)
+				//	issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+				outcome.Issue.Add(issue);
+				return;
 			}
 		}
 	}
