@@ -578,6 +578,23 @@ namespace Test.Fhir.FhirPath.Validator
 		}
 
 		[TestMethod]
+		public void TestMethodToString()
+		{
+			string expression = "(5|6).toString()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			// this should fail as the today function does not require any parameters
+			Assert.IsTrue(visitor.Outcome.Success);
+            Assert.AreEqual(1, visitor.Outcome.Warnings, "ToString can't be used on collections, but we've downgraded intentionally to a warning");
+		}
+
+		[TestMethod]
 		public void TestMethodAbs()
 		{
 			string expression = "(-5).abs() = 5";

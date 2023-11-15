@@ -19,7 +19,7 @@
     <PackageReference Include="Firely.Fhir.Packages" Version="4.2.0" />
     <PackageReference Include="Hl7.Fhir.Specification.Data.R4B" Version="5.3.0" />
     <PackageReference Include="Hl7.Fhir.Specification.R4B" Version="5.3.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />
     <PackageReference Include="MSTest.TestFramework" Version="3.1.1" />
   </ItemGroup>

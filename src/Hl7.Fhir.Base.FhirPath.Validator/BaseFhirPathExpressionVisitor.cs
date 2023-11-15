@@ -382,17 +382,9 @@ namespace Hl7.Fhir.FhirPath.Validator
                 }
 
                 // check the context of the function
-                if (!fd.IsSupportedContext(focus))
+                if (!fd.IsSupportedContext(focus, function, Outcome))
                 {
-                    var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
-                    {
-                        Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
-                        Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
-                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' is not supported on context type '{focus}'" }
-                    };
-                    if (function.Location != null)
-                        issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
-                    Outcome.AddIssue(issue);
+                    // Error was already reported inside the function
                 }
                 else
                 {

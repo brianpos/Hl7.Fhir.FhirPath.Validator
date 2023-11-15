@@ -1,9 +1,10 @@
 ﻿using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Support;
+using Hl7.FhirPath.Expressions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static Hl7.Fhir.FhirPath.Validator.FunctionDefinition;
 
 namespace Hl7.Fhir.FhirPath.Validator
 {
@@ -54,7 +55,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			Add(new FunctionDefinition("ln").AddContexts(mi, "integer-decimal,decimal-decimal")).Validations.Add(ValidateNoArguments);
 			Add(new FunctionDefinition("log").AddContexts(mi, "integer-decimal,decimal-decimal")); // requires a "base":decimal argument
 			Add(new FunctionDefinition("power").AddContexts(mi, "integer-integer,decimal-decimal")); // requires an exponent:integer|decimal argument
-			Add(new FunctionDefinition("round").AddContexts(mi, "decimal-decimal")); // requires a precision:integer argument
+			Add(new FunctionDefinition("round").AddContexts(mi, "decimal-decimal,integer-decimal")); // requires a precision:integer argument
 			Add(new FunctionDefinition("sqrt").AddContexts(mi, "integer-decimal,decimal-decimal")).Validations.Add(ValidateNoArguments);
 			Add(new FunctionDefinition("truncate").AddContexts(mi, "integer-integer,decimal-integer")).Validations.Add(ValidateNoArguments);
 
@@ -69,7 +70,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 		}
 
 		public FunctionDefinition Add(FunctionDefinition item,
-			GetReturnTypeDelegate getReturnType,
+            FunctionDefinition.GetReturnTypeDelegate getReturnType,
 			Action<FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome> validate)
 		{
 			item.GetReturnType = getReturnType;
@@ -78,7 +79,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			return item;
 		}
 		public FunctionDefinition Add(FunctionDefinition item,
-			GetReturnTypeDelegate getReturnType,
+			FunctionDefinition.GetReturnTypeDelegate getReturnType,
 			List<Action<FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome>> validate)
 		{
 			item.GetReturnType = getReturnType;
@@ -239,19 +240,40 @@ namespace Hl7.Fhir.FhirPath.Validator
 			return me;
 		}
 
-		internal static bool IsSupportedContext(this FunctionDefinition me, FhirPathVisitorProps focus)
+		internal static bool IsSupportedContext(this FunctionDefinition me, FhirPathVisitorProps focus, FunctionCallExpression function, OperationOutcome outcome)
 		{
 			if (me.SupportedAtRoot && focus.isRoot)
 				return true;
 
 			if (!me.SupportsCollections && focus.IsCollection())
+			{
+				var issueCol = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+				{
+					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Warning,
+					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.MultipleMatches,
+					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' can experience unexpected runtime errors when used with a collection" },
+				};
+				if (function.Location != null)
+					issueCol.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+				outcome.AddIssue(issueCol);
 				return false;
+			}
 
 			if (me.SupportsContext != null && me.SupportsContext(focus))
 				return true;
 
 			if (me.SupportedContexts.Any(sc => focus.CanBeOfType(sc.Type)))
 				return true;
+
+			var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+			{
+				Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+				Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
+				Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' is not supported on context type '{focus}'" }
+			};
+			if (function.Location != null)
+				issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+			outcome.AddIssue(issue);
 			return false;
 		}
 
