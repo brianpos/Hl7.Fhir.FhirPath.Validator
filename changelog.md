@@ -7,3 +7,4 @@
 * `round` function now handles integer as a valid context to run (and returns decimal)
 * Error message when reporting issue on `ToString` on collections demoted to a warning, consistent with the other occurrences of this - even though it is actually an error
 * `Iif` statement validation added
+* Improve error reporting for `length` - only on strings, otherwise errors (and a warning on string collections)

@@ -298,6 +298,24 @@ namespace Hl7.Fhir.FhirPath.Validator
 			if (me.SupportedAtRoot && focus.isRoot)
 				return true;
 
+			// Give the delegate first choice to override success (it can handle collections internally)
+			if (me.SupportsContext != null && me.SupportsContext(focus))
+				return true;
+
+			if (!me.SupportedContexts.Any(sc => focus.CanBeOfType(sc.Type)))
+			{
+				var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+				{
+					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
+					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' is not supported on context type '{focus}'" }
+				};
+				if (function.Location != null)
+					issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+				outcome.AddIssue(issue);
+				return false;
+			}
+
 			if (!me.SupportsCollections && focus.IsCollection())
 			{
 				var issueCol = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
@@ -309,25 +327,10 @@ namespace Hl7.Fhir.FhirPath.Validator
 				if (function.Location != null)
 					issueCol.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
 				outcome.AddIssue(issueCol);
-				return false;
+				return true;
 			}
 
-			if (me.SupportsContext != null && me.SupportsContext(focus))
 				return true;
-
-			if (me.SupportedContexts.Any(sc => focus.CanBeOfType(sc.Type)))
-				return true;
-
-			var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
-			{
-				Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
-				Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
-				Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' is not supported on context type '{focus}'" }
-			};
-			if (function.Location != null)
-				issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
-			outcome.AddIssue(issue);
-			return false;
 		}
 
 		internal static List<NodeProps> ToList(this NodeProps me)

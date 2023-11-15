@@ -301,7 +301,6 @@ namespace Hl7.Fhir.FhirPath.Validator
             "replace",
             "matches",
             "replaceMatches",
-            "length",
             "toChars",
         }; 
 
@@ -495,11 +494,6 @@ namespace Hl7.Fhir.FhirPath.Validator
             // TODO: Also include ofType special case handling to look for possible warnings
             else if (boolFuncs.Contains(function.FunctionName))
                 outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.FhirBoolean));
-            else if (function.FunctionName == "length")
-            {
-                // TODO: Also check that the context coming in here is a string
-                outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.Integer));
-            }
             else if (function.FunctionName == "count")
                 outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.Integer));
             else if (function.FunctionName == "extension")

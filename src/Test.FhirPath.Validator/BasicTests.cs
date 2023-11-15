@@ -227,7 +227,7 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsFalse(visitor.Outcome.Success, "Expected failure");
-            Assert.AreEqual("integer", r.ToString());
+            Assert.AreEqual("", r.ToString());
         }
 
         [TestMethod]
@@ -274,8 +274,28 @@ namespace Test.Fhir.FhirPath.Validator
             var r = pe.Accept(visitor);
             Console.WriteLine(visitor.ToString());
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsTrue(visitor.Outcome.Success);
+			Assert.AreEqual(0, visitor.Outcome.Errors);
+			Assert.AreEqual(1, visitor.Outcome.Warnings);
+			Assert.AreEqual("integer", r.ToString());
+        }
+
+		[TestMethod]
+		public void TestLengthContextNonStringCollection()
+		{
+			string expression = "contact.length()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsFalse(visitor.Outcome.Success, "Expected failure");
-            Assert.AreEqual("integer", r.ToString());
+			Assert.AreEqual("", r.ToString());
+            Assert.AreEqual(1, visitor.Outcome.Errors);
+			Assert.AreEqual(0, visitor.Outcome.Warnings);
         }
 
         [TestMethod]
