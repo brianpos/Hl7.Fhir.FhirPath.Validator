@@ -330,7 +330,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 				return true;
 			}
 
-				return true;
+			return true;
 		}
 
 		internal static List<NodeProps> ToList(this NodeProps me)
