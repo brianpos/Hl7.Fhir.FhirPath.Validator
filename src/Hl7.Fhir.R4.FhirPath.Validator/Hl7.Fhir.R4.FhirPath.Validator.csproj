@@ -4,7 +4,7 @@
     <TargetFrameworks>net70;net60;net462;netstandard2.1;netstandard2.0</TargetFrameworks>
     <AssemblyName>Hl7.Fhir.R4.FhirPath.Validator</AssemblyName>
     <PackageId>brianpos.Fhir.R4.FhirPath.Validator</PackageId>
-    <Version>5.3.0-beta4</Version>
+    <Version>5.3.0-beta5</Version>
     <Title>HL7 Fhir FhirPath Static Validator (R4)</Title>
     <Summary>Static Analysis tool to validate fhirpath expressions against the fhir R4 specification</Summary>
     <Description>Wraps the base static analysis tool to default in the R4 version of the class models for validation</Description>

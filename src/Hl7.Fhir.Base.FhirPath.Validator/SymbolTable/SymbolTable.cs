@@ -41,7 +41,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			Add(new FunctionDefinition("today", false, true) { GetReturnType = ReturnsDate }).Validations.Add(ValidateNoArguments);
 			Add(new FunctionDefinition("now", false, true) { GetReturnType = Returns<FhirDateTime> }).Validations.Add(ValidateNoArguments);
 			Add(new FunctionDefinition("timeOfDay", false, true) { GetReturnType = ReturnsTime }).Validations.Add(ValidateNoArguments);
-			Add(new FunctionDefinition("iif", false, true) { GetReturnType = IifReturnsType }).Validations.Add(ValidateRequiredBooleanFirstArgument);
+			Add(new FunctionDefinition("iif", false, true) { GetReturnType = IifReturnsType, SupportsContext = IifSupportsContext }).Validations.Add(ValidateRequiredBooleanFirstArgument);
 
 			// Add(new FunctionDefinition("allTrue", true, false) { GetReturnType = ReturnsBoolean }).Validations.Add(ValidateNoArguments);
 			Add(new FunctionDefinition("unary.-", false, true).AddContexts(mi, "integer-integer,decimal-decimal"));
@@ -132,6 +132,12 @@ namespace Hl7.Fhir.FhirPath.Validator
 			return FromType(typeof(FhirBoolean)).ToList();
 		}
 
+		bool IifSupportsContext(FhirPathVisitorProps focus)
+		{
+			if (focus.Types.Any(t => t.IsCollection))
+				return false;
+			return true;
+		}
 		List<NodeProps> IifReturnsType(FunctionDefinition item, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
 		{
 			// Result type will be the union of the types of the args

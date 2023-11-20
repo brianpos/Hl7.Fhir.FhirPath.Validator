@@ -719,6 +719,60 @@ namespace Test.Fhir.FhirPath.Validator
 		}
 
 		[TestMethod]
+		public void TestMethodIifEmptySourceColl()
+		{
+			string expression = "{}.iif(true, '1')";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine($"Result Type: {r.ToString()}");
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			// this should fail as the today function does not require any parameters
+			Assert.IsTrue(visitor.Outcome.Success);
+			Assert.AreEqual("string", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestMethodIifSingleSourceColl()
+		{
+			string expression = "('item').iif(true, '1')";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine($"Result Type: {r.ToString()}");
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			// this should fail as the today function does not require any parameters
+			Assert.IsTrue(visitor.Outcome.Success);
+			Assert.AreEqual("string", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestMethodIifMultipleSourceColl()
+		{
+			string expression = "('item1' | 'item2').iif(true, false)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine($"Result Type: {r.ToString()}");
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			// this should fail as the today function does not require any parameters
+			Assert.IsFalse(visitor.Outcome.Success);
+			Assert.AreEqual("", r.ToString());
+		}
+
+		[TestMethod]
 		public void TestMethodIif2StringsArgs()
 		{
 			string expression = "iif(true, 'yes', 'no')";
