@@ -990,6 +990,14 @@ namespace Hl7.Fhir.FhirPath.Validator
                     Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
                     Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' not found on {rFocus.TypeNames()}" }
                 };
+
+                // Do a check to see if this property exists as a variable that it could be using, and include that in the diagnostics as something it might be
+				if (variables.ContainsKey(ce.ChildName) && rFocus.isRoot)
+                {
+                    var v = variables[ce.ChildName];
+					issue.Details.Text += $" (did you mean to use the variable '%{ce.ChildName}' : {v.TypeNames()})";
+				}
+
                 if (expression.Location != null)
                     issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
                 if (_repeatChildren != null)

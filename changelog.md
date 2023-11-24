@@ -8,6 +8,8 @@
 * include support for `ordinal()` from the SDC specification
 * when no type is detected while processing output a `???` instead of a blank in the debug logs/error messages<br/>
    e.g. error display: `prop 'value' not found on ???` and a log entry: `.value : ???`
+* When a property is encountered that doesn't exist in the given context and that property name exists as a variable, 
+   provide a message in the error that indicates that a variable of that name exists (help common typo issue)
 
 ### November 20 2023: 5.3.0-beta5
 * Validate the `iif` function to be valid across any context (but not a collection)

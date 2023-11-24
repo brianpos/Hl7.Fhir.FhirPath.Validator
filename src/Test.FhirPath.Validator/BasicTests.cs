@@ -568,6 +568,24 @@ namespace Test.Fhir.FhirPath.Validator
         }
 
         [TestMethod]
+		public void TestMethodVariableNotDelimited()
+		{
+			string expression = "surprise.family";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Questionnaire));
+			visitor.RegisterVariable("surprise", typeof(Hl7.Fhir.Model.HumanName));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsFalse(visitor.Outcome.Success);
+			Assert.AreEqual("prop 'surprise' not found on Questionnaire (did you mean to use the variable '%surprise' : HumanName)", 
+				visitor.Outcome.Issue[0].Details.Text);
+		}
+
+		[TestMethod]
         public void TestMethod3()
         {
             string expression = "name.skip(1).first().convertsToString().select($this)";
