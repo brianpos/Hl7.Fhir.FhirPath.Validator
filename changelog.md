@@ -3,8 +3,14 @@
 
 ## Change log ##
 
+### November 24 2023: 5.3.0-beta6
+* update support for `answers()` to properly check the context that its valid on from the SDC specification
+* include support for `ordinal()` from the SDC specification
+* when no type is detected while processing output a `???` instead of a blank in the debug logs/error messages<br/>
+   e.g. error display: `prop 'value' not found on ???` and a log entry: `.value : ???`
+
 ### November 20 2023: 5.3.0-beta5
-* Validate the `iif` function to be valid across any context
+* Validate the `iif` function to be valid across any context (but not a collection)
 
 ### November 15 2023: 5.3.0-beta4
 * `round` function now handles integer as a valid context to run (and returns decimal)

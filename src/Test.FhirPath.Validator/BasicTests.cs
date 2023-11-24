@@ -22,6 +22,54 @@ namespace Test.Fhir.FhirPath.Validator
             _compiler = new FhirPathCompiler(symbolTable);
         }
 
+		[TestMethod]
+		public void TestMethodOrdinalCoding()
+		{
+			string expression = "contact.relationship.coding.ordinal()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("decimal", r.ToString());
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodOrdinalCodeableConcept()
+		{
+			string expression = "contact.relationship.ordinal()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("", r.ToString());
+			Assert.IsFalse(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodOrdinalCode()
+		{
+			string expression = "contact.relationship.coding.code.ordinal()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("decimal", r.ToString());
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
         [TestMethod]
         public void TestMethodWhere()
         {
@@ -83,7 +131,87 @@ namespace Test.Fhir.FhirPath.Validator
             Assert.IsTrue(visitor.Outcome.Success);
         }
 
+		[TestMethod]
+		public void TestMethodAnswers()
+		{
+			string expression = "answers().value.ofType(string).first()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(QuestionnaireResponse));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("string", r.ToString());
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodAnswersItemContext()
+		{
+			string expression = "item.first().answers().value.ofType(string).first()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(QuestionnaireResponse));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("string", r.ToString());
+			Assert.IsTrue(visitor.Outcome.Success);
+        }
+
         [TestMethod]
+		public void TestMethodAnswersItemCollection()
+		{
+			string expression = "item.answers().value.ofType(string)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(QuestionnaireResponse));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("string[]", r.ToString());
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodAnswersNegativeType()
+		{
+			string expression = "item.first().answers().value.ofType(string).first()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Questionnaire));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("", r.ToString());
+			Assert.IsFalse(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodAnswersNegativeProp()
+		{
+			string expression = "author.answers().value.ofType(string).first()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(QuestionnaireResponse));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("", r.ToString());
+			Assert.IsFalse(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
         public void TestMethodUnion()
         {
             string expression = "name.select(given.join(' ').union(family).join(', '))";

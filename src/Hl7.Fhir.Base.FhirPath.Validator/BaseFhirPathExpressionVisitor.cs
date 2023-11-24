@@ -420,7 +420,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                     {
                         Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
                         Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
-                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"String function '{function.FunctionName}' is not supported on {focus}" }
+                        Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"String function '{function.FunctionName}' is not supported on {focus.TypeNames()}" }
                     };
                     if (function.Location != null)
                         issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
@@ -654,7 +654,7 @@ namespace Hl7.Fhir.FhirPath.Validator
             {
                 VisitCombineOrUnionFunction(rFocus, expression, result);
                 _result.Append(')');
-                _result.AppendLine($" : {result}");
+                _result.AppendLine($" : {result.TypeNames()}");
                 _stackPropertyContext.Pop();
                 return result;
             }
@@ -704,7 +704,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                 _stackExpressionContext.Pop();
             }
 
-            _result.AppendLine($" : {result}");
+            _result.AppendLine($" : {result.TypeNames()}");
 
             _stackPropertyContext.Pop();
             return result;
@@ -988,7 +988,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                 {
                     Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
                     Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
-                    Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' not found on {rFocus}" }
+                    Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' not found on {rFocus.TypeNames()}" }
                 };
                 if (expression.Location != null)
                     issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
@@ -1001,7 +1001,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                     Outcome.AddIssue(issue);
             }
             _result.Append($"{ce.ChildName}");
-            _result.AppendLine($" : {r}");
+            _result.AppendLine($" : {r.TypeNames()}");
         }
 
         private void VisitIndexerExpression(FunctionCallExpression expression, FhirPathVisitorProps result, FhirPathVisitorProps rFocus)
@@ -1132,7 +1132,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                 }
             }
 
-            _result.AppendLine($"\r\n : {result} (op: {be.Op})");
+            _result.AppendLine($"\r\n : {result.TypeNames()} (op: {be.Op})");
         }
 
         public override FhirPathVisitorProps VisitNewNodeListInit(NewNodeListInitExpression expression)
@@ -1182,7 +1182,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                 }
                 _result.Append("$this");
 
-                _result.AppendLine($" : {r}");
+                _result.AppendLine($" : {r.TypeNames()}");
                 return r;
             }
             if (variables.ContainsKey(expression.Name))
@@ -1196,7 +1196,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                     }
                 }
                 // r.Types.Add(new NodeProps(variables[expression.Name]));
-                _result.AppendLine($" : {r}");
+                _result.AppendLine($" : {r.TypeNames()}");
                 return r;
             }
             var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()

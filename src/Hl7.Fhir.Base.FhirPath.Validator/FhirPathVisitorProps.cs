@@ -24,7 +24,15 @@ namespace Hl7.Fhir.FhirPath.Validator
             }
         }
 
-        public override string ToString()
+        public string TypeNames()
+        {
+            string result = ToString();
+			if (string.IsNullOrEmpty(result))
+				return "???";
+			return result;
+		}
+
+		public override string ToString()
         {
             return String.Join(", ", Types.Select(v =>
             {

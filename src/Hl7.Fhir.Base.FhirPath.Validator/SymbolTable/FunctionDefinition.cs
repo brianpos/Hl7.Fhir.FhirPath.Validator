@@ -42,6 +42,17 @@ namespace Hl7.Fhir.FhirPath.Validator
 		public GetReturnTypeDelegate GetReturnType { get; set; }
 		public List<Action<FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome>> Validations { get; set; } = new List<Action<FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome>>();
 
+		/// <summary>
+		/// Fluent mode to Add to the Validations collection - returns <b>this</b> so that it can just be chained to add more
+		/// </summary>
+		/// <param name="validationRule"></param>
+		/// <returns></returns>
+		public FunctionDefinition AddValidation(Action<FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome> validationRule) 
+		{
+			Validations.Add(validationRule);
+			return this;
+		}
+
 		public Func<FhirPathVisitorProps, bool> SupportsContext { get; set; }
 
 		public delegate List<NodeProps> GetReturnTypeDelegate(FunctionDefinition function, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> arguments, OperationOutcome outcome);

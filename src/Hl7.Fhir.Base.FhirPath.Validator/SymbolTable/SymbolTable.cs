@@ -61,7 +61,9 @@ namespace Hl7.Fhir.FhirPath.Validator
 			Add(new FunctionDefinition("truncate").AddContexts(mi, "integer-integer,decimal-integer")).Validations.Add(ValidateNoArguments);
 
 			// SDC additional functions
-			Add(new FunctionDefinition("answers", false, true) { GetReturnType = ReturnsAnswers }).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("answers", true, true) { GetReturnType = ReturnsAnswers, SupportsContext = AnswersSupportsContext }).AddValidation(ValidateNoArguments);
+			Add(new FunctionDefinition("ordinal").AddContexts(mi, "code-decimal,Coding-decimal"));
+			// sum, min, max, avg - shortcuts for aggregate -- need to check valid contexts, must be comparable, and incrementable
 		}
 
 		public FunctionDefinition Add(FunctionDefinition item)
@@ -105,6 +107,15 @@ namespace Hl7.Fhir.FhirPath.Validator
 		{
 			// Result is just an integer
 			return FromType(typeof(T)).ToList();
+		}
+
+		bool AnswersSupportsContext(FhirPathVisitorProps focus)
+		{
+			if (focus.CanBeOfType("QuestionnaireResponse"))
+				return true;
+			if (focus.CanBeOfType("QuestionnaireResponse#Item"))
+				return true;
+			return false;
 		}
 
 		List<NodeProps> ReturnsAnswers(FunctionDefinition item, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
@@ -314,7 +325,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 				{
 					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
 					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
-					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' is not supported on context type '{focus}'" }
+					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' is not supported on context type '{focus.TypeNames()}'" }
 				};
 				if (function.Location != null)
 					issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
