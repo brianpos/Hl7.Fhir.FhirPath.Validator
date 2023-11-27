@@ -185,10 +185,10 @@ namespace Hl7.Fhir.FhirPath.Validator
                     "quantity" => $"{expression.Value}",
                     _ => ""
                 };
-                _result.Append(debugValue);
+				AppendLine($"{debugValue} : {r}");
             }
             else
-                _result.Append($"{expression.Value}");
+				AppendLine($"{expression.Value} : {r}");
             // appendType(expression);
             return r;
         }
@@ -647,14 +647,14 @@ namespace Hl7.Fhir.FhirPath.Validator
             }
 
             if (!rFocus.isRoot)
-                _result.Append('.');
-            _result.Append($"{expression.FunctionName}(");
+				Append(".");
+			Append($"{expression.FunctionName}(");
 
             if (expression.FunctionName == "combine" || expression.FunctionName == "union")
             {
                 VisitCombineOrUnionFunction(rFocus, expression, result);
-                _result.Append(')');
-                _result.AppendLine($" : {result.TypeNames()}");
+				Append(")");
+				AppendLine($" : {result.TypeNames()}  // {expression.FunctionName}");
                 _stackPropertyContext.Pop();
                 return result;
             }
@@ -686,16 +686,21 @@ namespace Hl7.Fhir.FhirPath.Validator
 
             IncrementTab();
 
+			IncrementTab();
+
+			if (expression.Arguments.Any())
+				AppendLine();
+
             List<FhirPathVisitorProps> argTypes = new();
             foreach (var arg in expression.Arguments)
             {
                 if (argTypes.Count > 0)
-                    _result.Append(", ");
+					Append(", ");
                 argTypes.Add(arg.Accept(this));
             }
 
             DecrementTab();
-            _result.Append(')');
+			Append(")");
 
             DeduceReturnType(expression, rFocus, argTypes, result);
 
@@ -704,7 +709,10 @@ namespace Hl7.Fhir.FhirPath.Validator
                 _stackExpressionContext.Pop();
             }
 
-            _result.AppendLine($" : {result.TypeNames()}");
+			if (expression.Arguments.Any())
+				AppendLine($" : {result.TypeNames()}  // {expression.FunctionName}(...)");
+			else
+				AppendLine($" : {result.TypeNames()}");
 
             _stackPropertyContext.Pop();
             return result;
@@ -721,7 +729,7 @@ namespace Hl7.Fhir.FhirPath.Validator
             foreach (var arg in expression.Arguments)
             {
                 if (argTypesR.Count > 0)
-                    _result.Append(", ");
+					Append(", ");
                 argTypesR.Add(arg.Accept(this));
                 foreach (var t in argTypesR)
                 {
@@ -742,7 +750,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                 maxIterations--;
                 foreach (var arg in expression.Arguments)
                 {
-                    _result.Append(", ");
+					Append(", ");
                     argTypesR.Add(arg.Accept(this));
                     foreach (var t in argTypesR)
                     {
@@ -765,7 +773,6 @@ namespace Hl7.Fhir.FhirPath.Validator
                     Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"repeat() iterations exceeded 10" }
                 };
                 Outcome.AddIssue(issue);
-
             }
             _stackPropertyContext.Pop();
             _stackExpressionContext.Pop();
@@ -814,7 +821,7 @@ namespace Hl7.Fhir.FhirPath.Validator
         {
             // _stack.Push(rFocus);
             if (!rFocus.isRoot)
-                _result.Append('.');
+				Append(".");
             else
             {
                 if (rFocus.Types.FirstOrDefault().ClassMapping?.Name == ce.ChildName)
@@ -1008,27 +1015,29 @@ namespace Hl7.Fhir.FhirPath.Validator
                 else
                     Outcome.AddIssue(issue);
             }
-            _result.Append($"{ce.ChildName}");
-            _result.AppendLine($" : {r.TypeNames()}");
+			Append($"{ce.ChildName}");
+			AppendLine($" : {r.TypeNames()}");
         }
 
         private void VisitIndexerExpression(FunctionCallExpression expression, FhirPathVisitorProps result, FhirPathVisitorProps rFocus)
         {
-            _result.Append('[');
+			Append("[");
             foreach (var arg in expression.Arguments)
                 arg.Accept(this);
-            _result.Append(']');
+			Append("]");
             foreach (var t in rFocus.Types)
                 result.Types.Add(t.AsSingle());
-            // _result.AppendLine($" : {String.Join(", ", r.Types.Select(v => v.Name))}");
+			AppendLine($" : {result}");
         }
 
         private void VisitBinaryExpression(FunctionCallExpression expression, FhirPathVisitorProps result, BinaryExpression be)
         {
             var leftResult = expression.Arguments.First().Accept(this);
-            _result.AppendLine($"{be.Op}");
+			AppendLine($"{be.Op}");
             var rightExpression = expression.Arguments.Skip(1).First();
+			IncrementTab();
             var rightResult = rightExpression.Accept(this);
+			DecrementTab();
 
             if (be.Op == "is")
             {
@@ -1140,13 +1149,13 @@ namespace Hl7.Fhir.FhirPath.Validator
                 }
             }
 
-            _result.AppendLine($"\r\n : {result.TypeNames()} (op: {be.Op})");
+			AppendLine($": {result.TypeNames()}  // op: {be.Op}");
         }
 
         public override FhirPathVisitorProps VisitNewNodeListInit(NewNodeListInitExpression expression)
         {
             var r = new FhirPathVisitorProps();
-            Append("{}");
+			AppendLine("{}");
             // There is no type information for this sub-expression
 
             IncrementTab();
@@ -1188,14 +1197,14 @@ namespace Hl7.Fhir.FhirPath.Validator
                     foreach (var t in _inputTypes)
                         r.Types.Add(new NodeProps(t));
                 }
-                _result.Append("$this");
+				Append("$this");
 
-                _result.AppendLine($" : {r.TypeNames()}");
+				AppendLine($" : {r.TypeNames()}");
                 return r;
             }
             if (variables.ContainsKey(expression.Name))
             {
-                _result.Append($"%{expression.Name}");
+				Append($"%{expression.Name}");
                 if (variables[expression.Name] != null)
                 {
                     foreach (var vt in variables[expression.Name].Types)
@@ -1204,7 +1213,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                     }
                 }
                 // r.Types.Add(new NodeProps(variables[expression.Name]));
-                _result.AppendLine($" : {r.TypeNames()}");
+				AppendLine($" : {r.TypeNames()}");
                 return r;
             }
             var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
@@ -1220,15 +1229,26 @@ namespace Hl7.Fhir.FhirPath.Validator
             return r;
         }
 
-        private void Append(string text, bool newLine = true)
+		private void Append(string text)
         {
-            if (newLine)
+			string indent = new String(' ', _indent * 4);
+			if (_result.ToString().EndsWith("\r\n"))
+				_result.Append(indent);
+			_result.Append(text.Replace("\r\n", "\r\n" + indent));
+		}
+
+		private void AppendLine(string text)
             {
+			string indent = new String(' ', _indent * 4);
+			if (_result.ToString().EndsWith("\r\n"))
+				_result.Append(indent);
+			_result.Append(text.Replace("\r\n", "\r\n" + indent));
                 _result.AppendLine();
-                _result.Append(new String(' ', _indent * 4));
             }
 
-            _result.Append(text);
+		private void AppendLine()
+		{
+			_result.AppendLine();
         }
 
         private void IncrementTab()
