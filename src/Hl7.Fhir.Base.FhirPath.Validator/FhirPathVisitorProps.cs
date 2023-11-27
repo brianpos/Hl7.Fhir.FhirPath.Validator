@@ -56,7 +56,13 @@ namespace Hl7.Fhir.FhirPath.Validator
                 "canonical" => "string",
                 "uuid" => "string",
                 "oid" => "string",
-                _ => typeName
+                "base64Binary" => "string",
+				"positiveInt" => "integer",
+                "unsignedInt" => "integer",
+                "date" => "dateTime",
+                "instant" => "dateTime",
+
+				_ => typeName
             };
         }
 
