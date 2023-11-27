@@ -70,7 +70,103 @@ namespace Test.Fhir.FhirPath.Validator
 			Assert.IsTrue(visitor.Outcome.Success);
 		}
 
+		[TestMethod]
+		public void TestMethodAggregateNumericSum()
+		{
+			string expression = "telecom.rank.aggregate($this + $total, 0)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("positiveInt", r.ToString());
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodAggregateStringConcat()
+		{
+			string expression = "telecom.value.aggregate($this & (', ' + $total), {})";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("string", r.ToString());
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodAggregateStringConcat2()
+		{
+			string expression = "telecom.value.aggregate($this & (', ' + $total))";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("string", r.ToString());
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
         [TestMethod]
+		public void TestMethodAggregateStringList()
+		{
+			string expression = "telecom.value.aggregate($total.combine($this), {})";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("string[]", r.ToString());
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodAggregateNoParams()
+		{
+			string expression = "telecom.value.aggregate()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("", r.ToString());
+			Assert.IsFalse(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodAggregateTooManyParams()
+		{
+			string expression = "telecom.value.aggregate(1,3,4)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("", r.ToString());
+			Assert.IsFalse(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
 		public void TestMethodSum()
 		{
 			string expression = "telecom.rank.sum()";

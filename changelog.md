@@ -3,7 +3,7 @@
 
 ## Change log ##
 
-### November 24 2023: 5.3.0-beta6
+### November 27 2023: 5.3.0-beta6
 * update support for `answers()` to properly check the context that its valid on from the SDC specification
 * include support for `ordinal()` from the SDC specification
 * when no type is detected while processing output a `???` instead of a blank in the debug logs/error messages<br/>
@@ -13,6 +13,7 @@
 * Added SDC functions sum, min, max, avg
 * Added support for positiveInt/unsignedInt/base64Binary/date/instant type conversions for context processing to fhir primitive types
 * Refined debug output to indent content more consistently
+* Implementation of aggegate and $total
 
 ### November 20 2023: 5.3.0-beta5
 * Validate the `iif` function to be valid across any context (but not a collection)
