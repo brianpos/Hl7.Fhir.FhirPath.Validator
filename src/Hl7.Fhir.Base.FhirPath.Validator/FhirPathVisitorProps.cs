@@ -4,10 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 
 namespace Hl7.Fhir.FhirPath.Validator
 {
-    public class FhirPathVisitorProps
+    public class FhirPathVisitorProps : IAnnotatable, IAnnotated
     {
         public bool isRoot;
         public readonly Collection<NodeProps> Types = new();
@@ -105,5 +106,18 @@ namespace Hl7.Fhir.FhirPath.Validator
             }
             return result;
         }
-    }
+
+		#region << Annotations >>
+		[NonSerialized]
+		private AnnotationList _annotations = null;
+
+		private AnnotationList annotations => LazyInitializer.EnsureInitialized(ref _annotations, () => new());
+
+		public IEnumerable<object> Annotations(Type type) => annotations.OfType(type);
+
+		public void AddAnnotation(object annotation) => annotations.AddAnnotation(annotation);
+
+		public void RemoveAnnotations(Type type) => annotations.RemoveAnnotations(type);
+		#endregion
+	}
 }

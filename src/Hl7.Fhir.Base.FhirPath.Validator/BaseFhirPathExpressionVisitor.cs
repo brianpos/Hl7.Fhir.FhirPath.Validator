@@ -98,9 +98,9 @@ namespace Hl7.Fhir.FhirPath.Validator
 			}
 		}
 
-		private readonly ModelInspector _mi;
-		private readonly List<string> _supportedResources;
-		private readonly Type[] _openTypes;
+		protected readonly ModelInspector _mi;
+		protected readonly List<string> _supportedResources;
+		protected readonly Type[] _openTypes;
 
 		// for repeat error checking
 		struct RepeatInfo
@@ -369,7 +369,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			"*",
 		}.ToArray();
 
-		private void DeduceReturnType(FunctionCallExpression function, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> props, FhirPathVisitorProps outputProps)
+		protected virtual void DeduceReturnType(FunctionCallExpression function, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> props, FhirPathVisitorProps outputProps)
 		{
 			var fd = _table.Get(function.FunctionName);
 			if (fd != null)
@@ -498,7 +498,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			else if (function.FunctionName == "count")
 				outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.Integer));
 			else if (function.FunctionName == "extension")
-				outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.Extension));
+				outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.Extension), true);
 			else if (mathFuncs.Contains(function.FunctionName))
 			{
 				foreach (var t in focus.Types)
@@ -628,6 +628,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			if (expression is BinaryExpression be)
 			{
 				VisitBinaryExpression(expression, result, be);
+				AppendLine($": {result.TypeNames()}  // op: {be.Op}");
 				return result;
 			}
 			var rFocus = expression.Focus.Accept(this);
@@ -643,6 +644,8 @@ namespace Hl7.Fhir.FhirPath.Validator
 			if (expression is ChildExpression ce)
 			{
 				VisitChildExpression(expression, result, rFocus, ce);
+				Append($"{ce.ChildName}");
+				AppendLine($" : {result.TypeNames()}");
 				_stackPropertyContext.Pop();
 				return result;
 			}
@@ -896,7 +899,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			}
 		}
 
-		private void VisitChildExpression(FunctionCallExpression expression, FhirPathVisitorProps r, FhirPathVisitorProps rFocus, ChildExpression ce)
+		protected virtual void VisitChildExpression(FunctionCallExpression expression, FhirPathVisitorProps result, FhirPathVisitorProps rFocus, ChildExpression ce)
 		{
 			// _stack.Push(rFocus);
 			if (!rFocus.isRoot)
@@ -905,7 +908,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			{
 				if (rFocus.Types.FirstOrDefault().ClassMapping?.Name == ce.ChildName)
 				{
-					r.Types.Add(rFocus.Types.FirstOrDefault());
+					result.Types.Add(rFocus.Types.FirstOrDefault());
 					if (_repeatChildren?.ContainsKey(ce) == true)
 						_repeatChildren[ce] = null;
 					return;
@@ -920,7 +923,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 						var rt = _mi.GetTypeForFhirType(ce.ChildName);
 						if (rt.Name == ce.ChildName)
 						{
-							r.AddType(_mi, rt, rFocus.IsCollection());
+							result.AddType(_mi, rt, rFocus.IsCollection());
 							if (_repeatChildren?.ContainsKey(ce) == true)
 								_repeatChildren[ce] = null;
 							return;
@@ -974,7 +977,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 								if (cm != null)
 								{
 									// System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
-									r.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
+									result.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
 									propFound = true;
 									if (_repeatChildren?.ContainsKey(ce) == true)
 										_repeatChildren[ce] = null;
@@ -1016,7 +1019,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 											if (cme != null)
 											{
 												// System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
-												r.Types.Add(new NodeProps(cme, childProp, rFocus.IsCollection()));
+												result.Types.Add(new NodeProps(cme, childProp, rFocus.IsCollection()));
 												propFound = true;
 												if (_repeatChildren?.ContainsKey(ce) == true)
 													_repeatChildren[ce] = null;
@@ -1024,7 +1027,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 										}
 										break;
 									}
-									r.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
+									result.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
 									propFound = true;
 									if (_repeatChildren?.ContainsKey(ce) == true)
 										_repeatChildren[ce] = null;
@@ -1058,7 +1061,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 								var cm = _mi.FindOrImportClassMapping(ct);
 								if (cm != null)
 								{
-									r.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
+									result.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
 									propFound = true;
 									if (_repeatChildren?.ContainsKey(ce) == true)
 										_repeatChildren[ce] = null;
@@ -1094,8 +1097,6 @@ namespace Hl7.Fhir.FhirPath.Validator
 				else
 					Outcome.AddIssue(issue);
 			}
-			Append($"{ce.ChildName}");
-			AppendLine($" : {r.TypeNames()}");
 		}
 
 		private void VisitIndexerExpression(FunctionCallExpression expression, FhirPathVisitorProps result, FhirPathVisitorProps rFocus)
@@ -1109,7 +1110,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			AppendLine($" : {result}");
 		}
 
-		private void VisitBinaryExpression(FunctionCallExpression expression, FhirPathVisitorProps result, BinaryExpression be)
+		protected virtual void VisitBinaryExpression(FunctionCallExpression expression, FhirPathVisitorProps result, BinaryExpression be)
 		{
 			var leftResult = expression.Arguments.First().Accept(this);
 			AppendLine($"{be.Op}");
@@ -1227,8 +1228,6 @@ namespace Hl7.Fhir.FhirPath.Validator
 					Outcome.AddIssue(issue);
 				}
 			}
-
-			AppendLine($": {result.TypeNames()}  // op: {be.Op}");
 		}
 
 		public override FhirPathVisitorProps VisitNewNodeListInit(NewNodeListInitExpression expression)
@@ -1319,7 +1318,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			return r;
 		}
 
-		private void Append(string text)
+		protected void Append(string text)
 		{
 			string indent = new String(' ', _indent * 4);
 			if (_result.ToString().EndsWith("\r\n"))
@@ -1327,7 +1326,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			_result.Append(text.Replace("\r\n", "\r\n" + indent));
 		}
 
-		private void AppendLine(string text)
+		protected void AppendLine(string text)
 		{
 			string indent = new String(' ', _indent * 4);
 			if (_result.ToString().EndsWith("\r\n"))
@@ -1336,17 +1335,17 @@ namespace Hl7.Fhir.FhirPath.Validator
 			_result.AppendLine();
 		}
 
-		private void AppendLine()
+		protected void AppendLine()
 		{
 			_result.AppendLine();
 		}
 
-		private void IncrementTab()
+		protected void IncrementTab()
 		{
 			_indent += 1;
 		}
 
-		private void DecrementTab()
+		protected void DecrementTab()
 		{
 			_indent -= 1;
 		}
