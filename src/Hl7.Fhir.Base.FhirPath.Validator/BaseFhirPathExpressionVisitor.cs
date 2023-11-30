@@ -342,7 +342,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			"all",
 		}.ToArray();
 
-		private readonly string[] passthroughFuncs = new[]
+		protected readonly string[] passthroughFuncs = new[]
 		{
 			"single",
 			"where",

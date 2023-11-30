@@ -7,6 +7,7 @@ using Hl7.Fhir.Utility;
 using System.Collections.Generic;
 using Hl7.Fhir.Introspection;
 using System;
+using Hl7.Fhir.Support;
 
 namespace Hl7.Fhir.FhirPath.Validator
 {
@@ -27,25 +28,77 @@ namespace Hl7.Fhir.FhirPath.Validator
 				var extUrl = function.Arguments.FirstOrDefault(a => a is ConstantExpression) as ConstantExpression;
 				if (extUrl != null)
 				{
-					outputProps.SetAnnotation(extUrl);
-
-					var extensionDefinition = _source?.FindExtensionDefinition(extUrl.Value.ToString());
-					if (extensionDefinition != null)
+					var extAnnot = new ExtensionAnnotation()
 					{
-						// This will be used later on to filter out types if the value is walked into
-						outputProps.SetAnnotation(extensionDefinition);
+						CanonicalUrl = extUrl.Value.ToString(),
+						ParentIsCollection = focus.IsCollection()
+					};
+					outputProps.SetAnnotation(extAnnot);
 
-						// Filter down the extension array to singular if that's what the extension is defined as
-						if (!focus.IsCollection() && outputProps.Types.Count() == 1 && extensionDefinition.Differential?.Element.FirstOrDefault()?.Max == "1")
+					// Check to see if this is a complex extension (and the focus also has extension details)
+					if (focus.HasAnnotation<ExtensionAnnotation>())
+					{
+						// Complex extension
+						var parentExt = focus.Annotation<ExtensionAnnotation>();
+						extAnnot.Path = extAnnot.CanonicalUrl;
+						extAnnot.CanonicalUrl = parentExt.CanonicalUrl;
+						extAnnot.StructureDefinition = parentExt.StructureDefinition;
+						extAnnot.ParentIsCollection = parentExt.ParentIsCollection || parentExt.IsCollection;
+
+						// Check that this is a valid child of the parent extension and filter down the cardinalities
+						var eds = extAnnot.StructureDefinition.Differential?.Element.FirstOrDefault(ed => ((ed.Fixed as FhirUri)?.Value == extAnnot.Path));
+						if (eds != null)
 						{
-							var singleProp = outputProps.Types.First().AsSingle();
-							outputProps.Types.Clear();
-							outputProps.Types.Add(singleProp);
+							var propPaths = extAnnot.StructureDefinition.Differential?.Element.FirstOrDefault(ed => ed.ElementId == eds.ElementId.Substring(0, eds.ElementId.Length - 4));
+							var ValuePaths = extAnnot.StructureDefinition.Differential?.Element.FirstOrDefault(ed => ed.ElementId == eds.ElementId.Substring(0, eds.ElementId.Length - 4) + ".value[x]");
+							if (propPaths != null && ValuePaths != null)
+							{
+								extAnnot.Path = propPaths.ElementId;
+								extAnnot.IsCollection = !(propPaths?.Max == "1");
+								if (!parentExt.ParentIsCollection && !parentExt.IsCollection && outputProps.Types.Count() == 1 && propPaths.Max == "1")
+								{
+									var singleProp = outputProps.Types.First().AsSingle();
+									outputProps.Types.Clear();
+									outputProps.Types.Add(singleProp);
+								}
+							}
+						}
+					}
+					else
+					{
+						var extensionDefinition = _source?.FindExtensionDefinition(extAnnot.CanonicalUrl);
+						if (extensionDefinition != null)
+						{
+							// This will be used later on to filter out types if the value is walked into
+							extAnnot.StructureDefinition = extensionDefinition;
+							extAnnot.Path = extensionDefinition.Differential?.Element.FirstOrDefault()?.ElementId;
+							extAnnot.IsCollection = !(extensionDefinition.Differential?.Element.FirstOrDefault()?.Max == "1");
+
+							// Filter down the extension array to singular if that's what the extension is defined as
+							if (!focus.IsCollection() && !extAnnot.IsCollection && outputProps.Types.Count() == 1)
+							{
+								var singleProp = outputProps.Types.First().AsSingle();
+								outputProps.Types.Clear();
+								outputProps.Types.Add(singleProp);
+							}
+						}
+						else
+						{
+							// Provide an informational message that the extension was not able to be resolved
+							var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+							{
+								Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Information,
+								Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
+								Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Unable to resolve extension profile '{extAnnot.CanonicalUrl}'" }
+							};
+							if (function.Location != null)
+								issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+							Outcome.AddIssue(issue);
 						}
 					}
 				}
 			}
-			if (function.FunctionName == "where" && focus.CanBeOfType("Extension"))
+			else if (function.FunctionName == "where" && focus.CanBeOfType("Extension"))
 			{
 				// Check the argument to the where function, explicitly looking for url = 'string'
 				if (function.Arguments.Count() == 1 && function.Arguments.First() is BinaryExpression be)
@@ -56,26 +109,93 @@ namespace Hl7.Fhir.FhirPath.Validator
 						var extUrl = be.Arguments.OfType<ConstantExpression>().FirstOrDefault();
 						if (extPropExpr.ChildName == "url" && extUrl != null)
 						{
-							// This is our case!
-							outputProps.SetAnnotation(extUrl);
-
-							var extensionDefinition = _source?.FindExtensionDefinition(extUrl.Value.ToString());
-							if (extensionDefinition != null)
+							var extAnnot = new ExtensionAnnotation()
 							{
-								// This will be used later on to filter out types if the value is walked into
-								outputProps.SetAnnotation(extensionDefinition);
+								CanonicalUrl = extUrl.Value.ToString(),
+								ParentIsCollection = focus.IsCollection()
+							};
+							outputProps.SetAnnotation(extAnnot);
 
-								// Filter down the extension array to singular if that's what the extension is defined as
-								// TODO: This needs to check the parent of the collection, not the parent of the where!
-								if (!focus.Annotation<ExtensionAnnotation>().ParentIsCollection && outputProps.Types.Count() == 1 && extensionDefinition.Differential?.Element.FirstOrDefault()?.Max == "1")
+							ExtensionAnnotation focusExt = null;
+							if (focus.HasAnnotation<ExtensionAnnotation>())
+								focusExt = focus.Annotation<ExtensionAnnotation>();
+							if (focusExt?.StructureDefinition != null)
+							{
+								// This is the complex extension case
+								var parentExt = focus.Annotation<ExtensionAnnotation>();
+								extAnnot.Path = extAnnot.CanonicalUrl;
+								extAnnot.CanonicalUrl = parentExt.CanonicalUrl;
+								extAnnot.StructureDefinition = parentExt.StructureDefinition;
+								extAnnot.ParentIsCollection = parentExt.ParentIsCollection || parentExt.IsCollection;
+
+								// Check that this is a valid child of the parent extension and filter down the cardinalities
+								var eds = extAnnot.StructureDefinition.Differential?.Element.FirstOrDefault(ed => ((ed.Fixed as FhirUri)?.Value == extAnnot.Path));
+								if (eds != null)
 								{
-									var singleProp = outputProps.Types.First().AsSingle();
-									outputProps.Types.Clear();
-									outputProps.Types.Add(singleProp);
+									var propPaths = extAnnot.StructureDefinition.Differential?.Element.FirstOrDefault(ed => ed.ElementId == eds.ElementId.Substring(0, eds.ElementId.Length - 4));
+									var ValuePaths = extAnnot.StructureDefinition.Differential?.Element.FirstOrDefault(ed => ed.ElementId == eds.ElementId.Substring(0, eds.ElementId.Length - 4) + ".value[x]");
+									if (propPaths != null && ValuePaths != null)
+									{
+										extAnnot.Path = propPaths.ElementId;
+										extAnnot.IsCollection = !(propPaths?.Max == "1");
+										if (!parentExt.ParentIsCollection && !parentExt.IsCollection && outputProps.Types.Count() == 1 && propPaths.Max == "1")
+										{
+											var singleProp = outputProps.Types.First().AsSingle();
+											outputProps.Types.Clear();
+											outputProps.Types.Add(singleProp);
+										}
+									}
+								}
+							}
+							else
+							{
+								// This is our case!
+								if (focusExt != null)
+								{
+									extAnnot.ParentIsCollection = focusExt.ParentIsCollection || focusExt.IsCollection;
+								}
+
+								var extensionDefinition = _source?.FindExtensionDefinition(extAnnot.CanonicalUrl);
+								if (extensionDefinition != null)
+								{
+									// This will be used later on to filter out types if the value is walked into
+									extAnnot.StructureDefinition = extensionDefinition;
+									extAnnot.Path = extensionDefinition.Differential?.Element.FirstOrDefault()?.ElementId;
+									extAnnot.IsCollection = !(extensionDefinition.Differential?.Element.FirstOrDefault()?.Max == "1");
+
+									// Filter down the extension array to singular if that's what the extension is defined as
+									// TODO: This needs to check the parent of the collection, not the parent of the where!
+									if (!focus.Annotation<ExtensionAnnotation>().ParentIsCollection && outputProps.Types.Count() == 1 && extensionDefinition.Differential?.Element.FirstOrDefault()?.Max == "1")
+									{
+										var singleProp = outputProps.Types.First().AsSingle();
+										outputProps.Types.Clear();
+										outputProps.Types.Add(singleProp);
+									}
+								}
+								else
+								{
+									// Provide an informational message that the extension was not able to be resolved
+									var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+									{
+										Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Information,
+										Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
+										Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Unable to resolve extension profile '{extAnnot.CanonicalUrl}'" }
+									};
+									if (function.Location != null)
+										issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+									Outcome.AddIssue(issue);
 								}
 							}
 						}
 					}
+				}
+			}
+			else if (passthroughFuncs.Contains(function.FunctionName))
+			{
+				// passthrough our extension annotation
+				if (focus.HasAnnotation<ExtensionAnnotation>())
+				{
+					outputProps.SetAnnotation(focus.Annotation<ExtensionAnnotation>());
 				}
 			}
 		}
@@ -83,41 +203,56 @@ namespace Hl7.Fhir.FhirPath.Validator
 		protected override void VisitChildExpression(FunctionCallExpression expression, FhirPathVisitorProps result, FhirPathVisitorProps rFocus, ChildExpression ce)
 		{
 			base.VisitChildExpression(expression, result, rFocus, ce);
-			
-			// If this is an extension walking into it's value, check if the extension is available, and which value types are applicable.
-			if (rFocus.CanBeOfType("Extension") && ce.ChildName == "value")
-			{
-				if (rFocus.HasAnnotation<StructureDefinition>())
-				{
-					// Get the extension definition
-					var extensionDefinition = rFocus.Annotation<StructureDefinition>();
-					if (extensionDefinition != null)
-					{
-						// Get the value type
-						var edValue = extensionDefinition.Differential.Element.FirstOrDefault(ed => ed.Path == "Extension.value[x]");
-						if (edValue != null)
-						{
-							// Find the types that have been constrained out
-							var excludedTypes = result.Types.Where(t => !edValue.Type.Any(extType => extType.Code == t.ClassMapping.Name)).ToArray();
 
-							// Remove them from the result
-							foreach (var typeToRemove in excludedTypes)
-								result.Types.Remove(typeToRemove);
-
-							AppendLine($"// Extension {extensionDefinition.Title ?? extensionDefinition.Name} constrained type to : {result.TypeNames()}");
-						}
-					}
-				}
-			}
+			// walking into the extension property, lets kick things off with the known focus collection state
 			if (ce.ChildName == "extension")
 			{
-				result.SetAnnotation(new ExtensionAnnotation() { ParentIsCollection = rFocus.IsCollection() });
+				var childAnnotation = new ExtensionAnnotation() { ParentIsCollection = rFocus.IsCollection() };
+				result.SetAnnotation(childAnnotation);
+				if (rFocus.HasAnnotation<ExtensionAnnotation>())
+				{
+					var focusAnnotation = rFocus.Annotation<ExtensionAnnotation>();
+					childAnnotation.StructureDefinition = focusAnnotation.StructureDefinition;
+					childAnnotation.CanonicalUrl = focusAnnotation.CanonicalUrl;
+					childAnnotation.ParentIsCollection = rFocus.IsCollection() || focusAnnotation.IsCollection;
+				}
+			}
+
+			// If this is an extension walking into it's value, check if the extension is available, and which value types are applicable.
+			if (rFocus.HasAnnotation<ExtensionAnnotation>() && ce.ChildName == "value")
+			{
+				// Get the extension definition
+				var extensionDefinition = rFocus.Annotation<ExtensionAnnotation>();
+				if (extensionDefinition.StructureDefinition != null)
+				{
+					// Get the value type
+					var edValue = extensionDefinition.StructureDefinition.Differential?.Element.FirstOrDefault(ed => ed.ElementId == $"{extensionDefinition.Path}.value[x]");
+					if (edValue != null)
+					{
+						// Find the types that have been constrained out
+						var excludedTypes = result.Types.Where(t => !edValue.Type.Any(extType => extType.Code == t.ClassMapping.Name)).ToArray();
+
+						// Remove them from the result
+						foreach (var typeToRemove in excludedTypes)
+							result.Types.Remove(typeToRemove);
+
+						var edSlice = extensionDefinition.StructureDefinition.Differential?.Element.FirstOrDefault(ed => ed.ElementId == $"{extensionDefinition.Path}");
+						if (edSlice != null)
+							AppendLine($"// Extension '{edSlice.Label ?? edSlice.Short ?? edSlice.Definition ?? extensionDefinition.StructureDefinition.Title ?? extensionDefinition.StructureDefinition.Name}' constrained type to : {result.TypeNames()}");
+						else
+							AppendLine($"// Extension {extensionDefinition.StructureDefinition.Title ?? extensionDefinition.StructureDefinition.Name} constrained type to : {result.TypeNames()}");
+					}
+				}
 			}
 		}
 
 		class ExtensionAnnotation
 		{
-			public bool ParentIsCollection { get;set; }
+			public bool ParentIsCollection { get; set; }
+			public bool IsCollection { get; set; }
+			public string CanonicalUrl { get; set; }
+			public string Path { get; set; }
+			public StructureDefinition StructureDefinition { get; set; }
 		}
 	}
 }
