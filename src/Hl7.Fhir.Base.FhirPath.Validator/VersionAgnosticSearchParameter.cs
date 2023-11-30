@@ -5,6 +5,15 @@ using System.Diagnostics;
 namespace Hl7.Fhir.FhirPath.Validator
 {
 	/// <summary>
+	/// Version Agnostic implementation used by the above VersionAgnosticSearchParameter class
+	/// </summary>
+	public struct SearchParamComponent
+	{
+		public string Definition { get; set; }
+		public string Expression { get; set; }
+	}
+
+	/// <summary>
 	/// Version Agnostic implementation of the SearchParameter class from the various versions of FHIR (although isn't FIHR and hasn't changed)
 	/// </summary>
 	[System.Diagnostics.DebuggerDisplay(@"\{{DebuggerDisplay,nq}}")] // http://blogs.msdn.com/b/jaredpar/archive/2011/03/18/debuggerdisplay-attribute-best-practices.aspx

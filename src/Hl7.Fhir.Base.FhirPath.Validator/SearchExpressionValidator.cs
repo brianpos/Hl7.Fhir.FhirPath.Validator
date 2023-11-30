@@ -9,16 +9,6 @@ using System.Linq;
 
 namespace Hl7.Fhir.FhirPath.Validator
 {
-    /// <summary>
-    /// Version Agnostic implementation used by the above VersionAgnosticSearchParameter class
-    /// </summary>
-    public struct SearchParamComponent
-    {
-        public string Definition { get; set; }
-        public string Expression { get; set; }
-    }
-
-
     public class SearchExpressionValidator
     {
         public SearchExpressionValidator(ModelInspector mi, List<string> SupportedResources, Type[] OpenTypes, Func<string, VersionAgnosticSearchParameter> ResolveSearchParameter)
