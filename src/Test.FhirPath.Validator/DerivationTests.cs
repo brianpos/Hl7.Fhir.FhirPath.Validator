@@ -249,6 +249,36 @@ namespace Test.Fhir.FhirPath.Validator
 		}
 
 		[TestMethod]
+		public void TestExtensionComplexChild_Invalid()
+		{
+			string expression = "extension.where(url='http://hl7.org/fhir/StructureDefinition/geolocation').extension.where(url='not-a-property').value";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Location));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsFalse(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestExtensionComplexChild_Invalid2()
+		{
+			string expression = "extension.where(url='http://hl7.org/fhir/StructureDefinition/geolocation').extension('not-a-property').value";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Location));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsFalse(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
 		public void TestExtensionUnknown()
 		{
 			string expression = "extension('http://hl7.org/fhir/StructureDefinition/this-doesnt-exist').value";

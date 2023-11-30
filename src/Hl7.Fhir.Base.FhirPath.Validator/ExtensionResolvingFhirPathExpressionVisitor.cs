@@ -63,6 +63,20 @@ namespace Hl7.Fhir.FhirPath.Validator
 								}
 							}
 						}
+						else
+						{
+							// The property doesn't exist in this complex extension
+							var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+							{
+								Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+								Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
+								Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Property '{extUrl.Value.ToString()}' does not exist in the complex extension {extAnnot.CanonicalUrl}" }
+							};
+							if (function.Location != null)
+								issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+							Outcome.AddIssue(issue);
+							// outputProps.Types.Clear(); // This would then lead to further issues such as `prop 'value' not found on ???` but don't think that helps anyone
+						}
 					}
 					else
 					{
@@ -146,6 +160,21 @@ namespace Hl7.Fhir.FhirPath.Validator
 										}
 									}
 								}
+								else
+								{
+									// The property doesn't exist in this complex extension
+									var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+									{
+										Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+										Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
+										Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Property '{extUrl.Value.ToString()}' does not exist in the complex extension {extAnnot.CanonicalUrl}" }
+									};
+									if (function.Location != null)
+										issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+									Outcome.AddIssue(issue);
+									// outputProps.Types.Clear(); // This would then lead to further issues such as `prop 'value' not found on ???` but don't think that helps anyone
+								}
+
 							}
 							else
 							{
