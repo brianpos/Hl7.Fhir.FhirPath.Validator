@@ -3,6 +3,15 @@
 
 ## Change log ##
 
+### November 30 2023: 5.3.0-beta7
+* Support derivations on the BaseFhirPathExpressionvisitor
+* Support adding annotations to the FhirPathVisitorProps
+* Support for validating extension URLs via a ISourceResolver via a new class `ExtensionResolvingFhirPathExpressionVisitor`
+* Support for validating complex extension invariants with their internal "properties"
+* updated unit tests to set the Extension resolving
+* additional null reference check for search parameter checks encountered when trying to resolve a composite in a composite
+* search parameter validator able to swap the visitor (to be able to use derived visitors)
+
 ### November 27 2023: 5.3.0-beta6
 * update support for `answers()` to properly check the context that its valid on from the SDC specification
 * include support for `ordinal()` from the SDC specification

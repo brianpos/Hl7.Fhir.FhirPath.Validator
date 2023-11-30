@@ -30,6 +30,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 		}
 
 		private SymbolTable _table;
+		public FhirPathVisitorProps RootContext { get; } = new FhirPathVisitorProps() { isRoot = true };
 
 		/// <summary>
 		/// Set the Context of the expression to verify 
@@ -155,6 +156,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			if (cm != null && !_inputTypes.Contains(cm))
 			{
 				_inputTypes.Add(cm);
+				RootContext.Types.Add(new NodeProps(cm));
 			}
 		}
 
@@ -163,6 +165,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			if (!_inputTypes.Contains(cm))
 			{
 				_inputTypes.Add(cm);
+				RootContext.Types.Add(new NodeProps(cm));
 			}
 		}
 
@@ -1250,32 +1253,19 @@ namespace Hl7.Fhir.FhirPath.Validator
 			if (expression.Name == "builtin.that")
 			{
 				r.isRoot = true;
-				if (_stackExpressionContext.Any())
-				{
-					foreach (var t in _stackExpressionContext.Peek().Types)
-						r.Types.Add(t);
-				}
-				else
-				{
-					foreach (var t in _inputTypes)
-						r.Types.Add(new NodeProps(t));
-				}
-				// _result.AppendLine($" : {String.Join(", ", r.Types.Select(v => v.Name))}");
+				if (!_stackExpressionContext.Any())
+					return RootContext;
+				foreach (var t in _stackExpressionContext.Peek().Types)
+					r.Types.Add(t);
 				return r;
 			}
 			if (expression.Name == "builtin.this")
 			{
-				if (_stackExpressionContext.Any())
-				{
-					foreach (var t in _stackExpressionContext.Peek().Types)
-						r.Types.Add(t);
-				}
-				else
-				{
-					foreach (var t in _inputTypes)
-						r.Types.Add(new NodeProps(t));
-				}
 				Append("$this");
+				if (!_stackExpressionContext.Any())
+					return RootContext;
+				foreach (var t in _stackExpressionContext.Peek().Types)
+					r.Types.Add(t);
 
 				AppendLine($" : {r.TypeNames()}");
 				return r;

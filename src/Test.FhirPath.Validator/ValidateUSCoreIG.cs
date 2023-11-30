@@ -18,6 +18,14 @@ namespace Test.Fhir.FhirPath.Validator
     {
         private readonly ModelInspector _mi = ModelInspector.ForAssembly(typeof(Patient).Assembly);
         FhirPathCompiler _compiler;
+		public static ZipSource _source = ZipSource.CreateValidationSource();
+
+		private ExtensionResolvingFhirPathExpressionVisitor CreateFhirPathValidator(string packageId)
+		{
+			CachedResolver _cachedSource = new CachedResolver(new MultiResolver(_source, _ig_source[packageId]));
+			return new ExtensionResolvingFhirPathExpressionVisitor(_cachedSource, _mi, Hl7.Fhir.Model.ModelInfo.SupportedResources,
+				  Hl7.Fhir.Model.ModelInfo.OpenTypes);
+		}
 
         [TestInitialize]
         public void Init()
@@ -60,6 +68,7 @@ namespace Test.Fhir.FhirPath.Validator
         //    string folder = @"c:\temp\uscore";
         //    await Firely.Fhir.Packages.Packaging.UnpackToFolder(package, folder);
         //}
+        private static Dictionary<string, CommonDirectorySource> _ig_source = new Dictionary<string, CommonDirectorySource>();
 
         public static IEnumerable<object[]> InvariantsInIG(string packageId, string packageVersion, string[] knownBadInvariants)
         {
@@ -80,6 +89,8 @@ namespace Test.Fhir.FhirPath.Validator
             }
 
             CommonDirectorySource source = new CommonDirectorySource(mi, folder, new DirectorySourceSettings() { IncludeSubDirectories = true });
+            if (!_ig_source.ContainsKey(packageId))
+                _ig_source.Add(packageId, source);
             foreach (var item in source.ListSummaries().Where(s => s.ResourceTypeName == "StructureDefinition"))
             {
                 var sd = source.ResolveByUri(item.ResourceUri) as StructureDefinition;
@@ -121,14 +132,22 @@ namespace Test.Fhir.FhirPath.Validator
         [DynamicData(nameof(InvariantsInUsCoreIG))]
         public void VerifyUsCoreExpression(string type, string key, string expression, bool expectSuccess, string canonical)
         {
+			if (!_ig_source.ContainsKey("hl7.fhir.us.core"))
+			{
+				var t = InvariantsInUsCoreIG;
+			}
             // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
             Console.WriteLine($"Context: {type}");
             Console.WriteLine($"Canonical: {canonical}");
             Console.WriteLine($"Invariant key: {key}");
             Console.WriteLine($"Expression:\r\n{expression}");
             Console.WriteLine("---------");
-            var visitor = new FhirPathExpressionVisitor();
+            var visitor = CreateFhirPathValidator("hl7.fhir.us.core");
             visitor.SetContext(type);
+			var source = _ig_source["hl7.fhir.us.core"];
+			var res = source.ResolveByCanonicalUri(canonical);
+			if (res is StructureDefinition sd && sd.Type == "Extension")
+				visitor.SetContextExtension(sd);
             var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
             Console.WriteLine($"Result: {r}");
@@ -157,14 +176,22 @@ namespace Test.Fhir.FhirPath.Validator
         [DynamicData(nameof(InvariantsInSdcIG))]
         public void VerifySdcExpression(string type, string key, string expression, bool expectSuccess, string canonical)
         {
+			if (!_ig_source.ContainsKey("hl7.fhir.uv.sdc"))
+			{
+				var t = InvariantsInSdcIG;
+			}
             // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
             Console.WriteLine($"Context: {type}");
             Console.WriteLine($"Canonical: {canonical}");
             Console.WriteLine($"Invariant key: {key}");
             Console.WriteLine($"Expression:\r\n{expression}");
             Console.WriteLine("---------");
-            var visitor = new FhirPathExpressionVisitor();
+            var visitor = CreateFhirPathValidator("hl7.fhir.uv.sdc");
             visitor.SetContext(type);
+            var source = _ig_source["hl7.fhir.uv.sdc"];
+            var res = source.ResolveByCanonicalUri(canonical);
+            if (res is StructureDefinition sd && sd.Type == "Extension")
+                visitor.SetContextExtension(sd);
             var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
             Console.WriteLine($"Result: {r}");
@@ -192,14 +219,23 @@ namespace Test.Fhir.FhirPath.Validator
         [DynamicData(nameof(InvariantsInAuBaseIG))]
         public void VerifyAuBaseExpression(string type, string key, string expression, bool expectSuccess, string canonical)
         {
+			if (!_ig_source.ContainsKey("hl7.fhir.au.base"))
+			{
+				var t = InvariantsInAuBaseIG;
+			}
             // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
             Console.WriteLine($"Context: {type}");
             Console.WriteLine($"Canonical: {canonical}");
             Console.WriteLine($"Invariant key: {key}");
             Console.WriteLine($"Expression:\r\n{expression}");
             Console.WriteLine("---------");
-            var visitor = new FhirPathExpressionVisitor();
+            var visitor = CreateFhirPathValidator("hl7.fhir.au.base");
+
             visitor.SetContext(type);
+			var source = _ig_source["hl7.fhir.au.base"];
+			var res = source.ResolveByCanonicalUri(canonical);
+			if (res is StructureDefinition sd && sd.Type == "Extension")
+				visitor.SetContextExtension(sd);
             var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
             Console.WriteLine($"Result: {r}");
@@ -227,14 +263,22 @@ namespace Test.Fhir.FhirPath.Validator
         [DynamicData(nameof(InvariantsInChCoreIG))]
         public void VerifyChCoreExpression(string type, string key, string expression, bool expectSuccess, string canonical)
         {
+			if (!_ig_source.ContainsKey("ch.fhir.ig.ch-core"))
+			{
+				var t = InvariantsInChCoreIG;
+			}
             // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
             Console.WriteLine($"Context: {type}");
             Console.WriteLine($"Canonical: {canonical}");
             Console.WriteLine($"Invariant key: {key}");
             Console.WriteLine($"Expression:\r\n{expression}");
             Console.WriteLine("---------");
-            var visitor = new FhirPathExpressionVisitor();
+            var visitor = CreateFhirPathValidator("ch.fhir.ig.ch-core");
             visitor.SetContext(type);
+			var source = _ig_source["ch.fhir.ig.ch-core"];
+			var res = source.ResolveByCanonicalUri(canonical);
+			if (res is StructureDefinition sd && sd.Type == "Extension")
+				visitor.SetContextExtension(sd);
             var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
             Console.WriteLine($"Result: {r}");
@@ -262,14 +306,22 @@ namespace Test.Fhir.FhirPath.Validator
         [DynamicData(nameof(InvariantsInSdohClinicalCareIG))]
         public void VerifySdohClinicalCareExpression(string type, string key, string expression, bool expectSuccess, string canonical)
         {
+            if (!_ig_source.ContainsKey("hl7.fhir.us.sdoh-clinicalcare"))
+            {
+                var t= InvariantsInSdohClinicalCareIG;
+			}
             // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
             Console.WriteLine($"Context: {type}");
             Console.WriteLine($"Canonical: {canonical}");
             Console.WriteLine($"Invariant key: {key}");
             Console.WriteLine($"Expression:\r\n{expression}");
             Console.WriteLine("---------");
-            var visitor = new FhirPathExpressionVisitor();
+            var visitor = CreateFhirPathValidator("hl7.fhir.us.sdoh-clinicalcare");
             visitor.SetContext(type);
+			var source = _ig_source["hl7.fhir.us.sdoh-clinicalcare"];
+			var res = source.ResolveByCanonicalUri(canonical);
+			if (res is StructureDefinition sd && sd.Type == "Extension")
+				visitor.SetContextExtension(sd);
             var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
             Console.WriteLine($"Result: {r}");

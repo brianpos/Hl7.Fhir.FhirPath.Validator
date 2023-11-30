@@ -19,9 +19,16 @@ namespace Test.Fhir.FhirPath.Validator
     {
         static private readonly ModelInspector _mi = ModelInspector.ForAssembly(typeof(Patient).Assembly);
         static FhirPathCompiler _compiler;
-        static ZipSource _source = ZipSource.CreateValidationSource();
+        public static ZipSource _source = ZipSource.CreateValidationSource();
+		private readonly CachedResolver _cachedSource = new CachedResolver(_source);
 
-        [TestInitialize]
+		private BaseFhirPathExpressionVisitor CreateFhirPathValidator()
+		{
+			return new ExtensionResolvingFhirPathExpressionVisitor(_cachedSource, _mi, Hl7.Fhir.Model.ModelInfo.SupportedResources,
+				  Hl7.Fhir.Model.ModelInfo.OpenTypes);
+		}
+
+		[TestInitialize]
         public void Init()
         {
             // include all the conformance types
@@ -135,7 +142,7 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine($"Expression:\r\n{expression}");
 
             Console.WriteLine("---------");
-            var visitor = new FhirPathExpressionVisitor();
+            var visitor = CreateFhirPathValidator();
             visitor.SetContext(path);
             var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);

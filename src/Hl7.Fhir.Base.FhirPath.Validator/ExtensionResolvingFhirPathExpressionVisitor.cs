@@ -13,6 +13,20 @@ namespace Hl7.Fhir.FhirPath.Validator
 {
 	public class ExtensionResolvingFhirPathExpressionVisitor : BaseFhirPathExpressionVisitor
 	{
+		/// <summary>
+		/// When validating invariants in an Extension profile, use this method
+		/// to set the internal context details for the extension.
+		/// This is only applicable for complex extensions.
+		/// </summary>
+		/// <param name="sd"></param>
+		public void SetContextExtension(StructureDefinition sd)
+		{
+			if (sd.Type != "Extension")
+				throw new ArgumentException("The structure defintion is not an extension to use as the context", nameof(sd));
+
+			RootContext.AddAnnotation(new ExtensionAnnotation() { CanonicalUrl = sd.Url, StructureDefinition = sd });
+		}
+
 		public ExtensionResolvingFhirPathExpressionVisitor(IResourceResolver source, ModelInspector mi, List<string> SupportedResources, Type[] OpenTypes)
 			: base(mi, SupportedResources, OpenTypes)
 		{
