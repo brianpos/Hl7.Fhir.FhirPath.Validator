@@ -442,8 +442,45 @@ namespace Hl7.Fhir.FhirPath.Validator
 			else if (function.FunctionName == "is")
 			{
 				// Check this before the boolfuncs tests
-				foreach (var t in focus.Types)
-					outputProps.Types.Add(t);
+				var isTypeArg = function.Arguments.First();
+				FhirPathVisitorProps isType = props.FirstOrDefault();
+				// Check if the type possibly COULD be evaluated as true
+				if (isTypeArg is ConstantExpression ceTa)
+				{
+					// ceTa.Value
+					var isTypeToCheck = _mi.GetTypeForFhirType(ceTa.Value as string);
+					var possibleTypeNames = focus.Types.Select(t => t.ClassMapping.Name);
+					var validResultTypes = focus.Types.Where(t => t.ClassMapping.NativeType.IsAssignableFrom(isTypeToCheck));
+					if (!focus.CanBeOfType(ceTa.Value as string))
+					{
+						var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+						{
+							Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+							Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
+							Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an 'is' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
+						};
+						if (function.Location != null)
+							issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+						Outcome.AddIssue(issue);
+					}
+					else
+					{
+						outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.FhirBoolean));
+					}
+				}
+				// Check the collection too
+				if (focus.IsCollection())
+				{
+					var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+					{
+						Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Warning,
+						Code = Hl7.Fhir.Model.OperationOutcome.IssueType.MultipleMatches,
+						Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' can experience unexpected runtime errors when used with a collection" },
+					};
+					if (function.Location != null)
+						issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+					Outcome.AddIssue(issue);
+				}
 			}
 			else if (function.FunctionName == "as" || function.FunctionName == "ofType")
 			{
@@ -1143,7 +1180,6 @@ namespace Hl7.Fhir.FhirPath.Validator
 						Outcome.AddIssue(issue);
 					}
 				}
-				// TODO:
 				result.AddType(_mi, typeof(Hl7.Fhir.Model.FhirBoolean));
 			}
 			else if (be.Op == "as")

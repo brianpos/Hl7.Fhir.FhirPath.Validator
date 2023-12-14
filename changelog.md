@@ -3,6 +3,11 @@
 
 ## Change log ##
 
+### December 14 2023: 5.3.0-beta8
+* Correct return type of `as()` to boolean
+* Add validation check to the `as()` function to check that the type provided could potentially be valid
+* Include `string` as one of the valid datatypes for the Search Type `Uri`
+
 ### November 30 2023: 5.3.0-beta7
 * Support derivations on the BaseFhirPathExpressionvisitor
 * Support adding annotations to the FhirPathVisitorProps

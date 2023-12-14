@@ -6,6 +6,8 @@ using Hl7.Fhir.Serialization;
 using Hl7.Fhir.Model;
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Linq;
+using Hl7.Fhir.Utility;
 
 namespace Test.Fhir.FhirPath.Validator
 {
@@ -664,6 +666,56 @@ namespace Test.Fhir.FhirPath.Validator
         }
 
         [TestMethod]
+		public void TestMethodIs()
+		{
+			string expression = "name.first().is(HumanName)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success);
+			Assert.AreEqual("boolean", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestMethodIsMultiple()
+		{
+			string expression = "name.is(HumanName)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success);
+			Assert.AreEqual(1, visitor.Outcome.Warnings);
+			Assert.AreEqual("multiple-matches", visitor.Outcome.Issue.First().Code.GetLiteral());
+			Assert.AreEqual("boolean", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestMethodIsWrongType()
+		{
+			string expression = "name.first().is(code)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsFalse(visitor.Outcome.Success);
+			Assert.AreEqual("", r.ToString());
+		}
+
+		[TestMethod]
         public void TestMethodVariable()
         {
             string expression = "%surprise.family";
