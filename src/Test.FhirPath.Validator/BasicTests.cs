@@ -342,6 +342,60 @@ namespace Test.Fhir.FhirPath.Validator
         }
 
         [TestMethod]
+		public void TestMethodResolve()
+		{
+			string expression = "entry.resolve().ofType(Observation).exists()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Composition));
+			visitor.SetContext("Composition.section");
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine($"Result Type: {r}");
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("boolean", r.ToString());
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodResolve2()
+		{
+			string expression = "author.resolve()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Composition));
+			visitor.SetContext("Composition.section");
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine($"Result Type: {r}");
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("Practitioner, PractitionerRole, Device, Patient, RelatedPerson, Organization", r.ToString());
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodResolve3()
+		{
+			string expression = "author.resolve().ofType(Observation)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Composition));
+			visitor.SetContext("Composition.section");
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine($"Result Type: {r}");
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.AreEqual("", r.ToString());
+			Assert.IsFalse(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
         public void TestMethodRepeat()
         {
             string expression = "QuestionnaireResponse.repeat(item | answer)";

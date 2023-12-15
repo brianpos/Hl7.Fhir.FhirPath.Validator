@@ -500,7 +500,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 						{
 							Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
 							Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
-							Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an 'as' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
+							Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an '{function.FunctionName}' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
 						};
 						if (function.Location != null)
 							issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
@@ -588,6 +588,16 @@ namespace Hl7.Fhir.FhirPath.Validator
 						// retrieve the classname
 						foreach (var typeName in v.Resources)
 						{
+							if (v.Resources.Length == 1)
+							{
+								// Type not listed, so just enumerate ALL resources
+								foreach (var typeNameAny in _supportedResources)
+								{
+									var cmAny = _mi.FindClassMapping(typeNameAny);
+									outputProps.Types.Add(new NodeProps(cmAny));
+								}
+								break;
+							}
 							var cm = _mi.FindClassMapping(typeName);
 							outputProps.Types.Add(new NodeProps(cm));
 						}

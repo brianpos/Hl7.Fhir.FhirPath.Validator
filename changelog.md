@@ -3,6 +3,11 @@
 
 ## Change log ##
 
+### December 15 2023: 5.3.0-beta10
+* Correct the error message shown when incorrectly using `ofType` to which shows `as`
+* If the `resolve()` function is performed on a property that resolves to just Resource,
+  this really means that can be any type of resource supported by that version of FHIR
+
 ### December 15 2023: 5.3.0-beta9
 * Revert the inclusion `string` as one of the valid datatypes for the Search Type `Uri`
 
