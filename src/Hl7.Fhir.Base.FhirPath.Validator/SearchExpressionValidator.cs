@@ -295,7 +295,8 @@ namespace Hl7.Fhir.FhirPath.Validator
 			"canonical",
 			"oid",
 			"uuid",
-			"string", // Not in the spec, but is still valid - R6 may update to clarify this
+			// Gino clarified again, that this is not actually valid, changed the IG that was doing it
+			// "string", // Not in the spec, but is still valid - R6 may update to clarify this
 		};
 
 		readonly string[] DateTypes = {

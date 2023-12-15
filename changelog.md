@@ -3,6 +3,9 @@
 
 ## Change log ##
 
+### December 15 2023: 5.3.0-beta9
+* Revert the inclusion `string` as one of the valid datatypes for the Search Type `Uri`
+
 ### December 14 2023: 5.3.0-beta8
 * Correct return type of `as()` to boolean
 * Add validation check to the `as()` function to check that the type provided could potentially be valid
