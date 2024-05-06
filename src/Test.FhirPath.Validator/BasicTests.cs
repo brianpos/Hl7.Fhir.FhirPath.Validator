@@ -785,7 +785,90 @@ namespace Test.Fhir.FhirPath.Validator
             Assert.IsTrue(visitor.Outcome.Success);
         }
 
+		[TestMethod]
+		public void TestMethodDefineVariable()
+		{
+			string expression = "defineVariable('test', id).select(%test)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success);
+			Assert.AreEqual("id", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestMethodDefineVariable2()
+		{
+			string expression = "defineVariable('mrn', identifier.first()).select(%mrn.value)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success);
+			Assert.AreEqual("string", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestMethodDefineVariable3()
+		{
+			string expression = "defineVariable('pat').select(%pat.identifier.value)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success);
+			Assert.AreEqual("string[]", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestMethodDefineVariable4()
+		{
+			string expression = "defineVariable('pat'+'1').select(%pat1.identifier.value)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success);
+			Assert.AreEqual("string[]", r.ToString());
+        }
+
         [TestMethod]
+		public void TestMethodDefineVariable5()
+		{
+			string expression = "defineVariable('pat'+identifier.count().toString()).select(%pat1.identifier.value)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsFalse(visitor.Outcome.Success);
+			Assert.AreEqual("Dynamic defineVariable name argument unable to determine the variable type",
+				visitor.Outcome.Issue[0].Details.Text);
+			Assert.AreEqual("variable 'pat1' not found - dynamic variable(s) were in scope",
+				visitor.Outcome.Issue[1].Details.Text);
+		}
+
+		[TestMethod]
 		public void TestMethodVariableNotDelimited()
 		{
 			string expression = "surprise.family";

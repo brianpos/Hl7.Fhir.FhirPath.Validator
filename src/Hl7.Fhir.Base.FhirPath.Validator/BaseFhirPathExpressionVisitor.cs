@@ -2,6 +2,7 @@
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Support;
 using Hl7.Fhir.Utility;
+using Hl7.FhirPath;
 using Hl7.FhirPath.Expressions;
 using System;
 using System.Collections.Generic;
@@ -147,6 +148,8 @@ namespace Hl7.Fhir.FhirPath.Validator
 			}
 		}
 		private readonly Dictionary<string, FhirPathVisitorProps> variables = new();
+		private readonly Dictionary<string, FhirPathVisitorProps> definedVariables = new();
+		private Boolean _dynamicDefinedVariableInScope = false;
 
 		public override string ToString()
 		{
@@ -355,7 +358,6 @@ namespace Hl7.Fhir.FhirPath.Validator
 			"single",
 			"where",
 			"trace",
-			"defineVariable",
 			"first",
 			"skip",
 			"take",
@@ -368,6 +370,8 @@ namespace Hl7.Fhir.FhirPath.Validator
             // New additions in FHIR R5
             "lowBoundary",
 			"highBoundary",
+
+			// defineVariable not required here as it is handled in the SymbolTable logic
 		}.ToArray();
 
 		private readonly string[] mathFuncs = new[]
@@ -654,6 +658,43 @@ namespace Hl7.Fhir.FhirPath.Validator
 					Outcome.AddIssue(issue);
 				}
 			}
+
+			if (function.FunctionName == "defineVariable")
+			{
+				var definedVariableResultType = focus;
+				if (props.Count() >= 2)
+				{
+					definedVariableResultType = props.Skip(1).FirstOrDefault();
+				}
+				// evaluate the first parameter as the name of the string
+				try
+				{
+					var cf = new FhirPathCompiler().Compile(function.Arguments.First());
+					var nv = cf(null, new FhirEvaluationContext());
+					if (nv.ToFhirValues()?.FirstOrDefault() is FhirString fs)
+					{
+						if (definedVariables.ContainsKey(fs.Value))
+							definedVariables[fs.Value] = definedVariableResultType;
+						else
+							definedVariables.Add(fs.Value, definedVariableResultType);
+					}
+				}
+				catch (Exception ex)
+				{
+					// Evaluation of the expression failed - this is typically a static string, so we can evalulate it,
+					// if not will fail, and we'll just continue and not know what type this is
+					_dynamicDefinedVariableInScope = true;
+					var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+					{
+						Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Information,
+						Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Informational,
+						Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Dynamic {function.FunctionName} name argument unable to determine the variable type" }
+					};
+					ReportErrorLocation(function, issue);
+					Outcome.AddIssue(issue);
+				}
+			}
+
 			if (booleanArgFuncs.Contains(function.FunctionName))
 			{
 				if (props.FirstOrDefault()?.ToString() != "boolean")
@@ -1330,6 +1371,33 @@ namespace Hl7.Fhir.FhirPath.Validator
 				}
 				// r.Types.Add(new NodeProps(variables[expression.Name]));
 				AppendLine($" : {r.TypeNames()}");
+				return r;
+			}
+			if (definedVariables.ContainsKey(expression.Name))
+			{
+				Append($"%{expression.Name}");
+				if (definedVariables[expression.Name] != null)
+				{
+					foreach (var vt in definedVariables[expression.Name].Types)
+					{
+						r.Types.Add(vt);
+					}
+				}
+				// r.Types.Add(new NodeProps(variables[expression.Name]));
+				AppendLine($" : {r.TypeNames()}");
+				return r;
+			}
+			if (_dynamicDefinedVariableInScope)
+			{
+				var issueDynamicVars = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+				{
+					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Warning,
+					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
+					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"variable '{expression.Name}' not found - dynamic variable(s) were in scope" }
+				};
+				ReportErrorLocation(expression, issueDynamicVars);
+				Outcome.AddIssue(issueDynamicVars);
+
 				return r;
 			}
 			var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()

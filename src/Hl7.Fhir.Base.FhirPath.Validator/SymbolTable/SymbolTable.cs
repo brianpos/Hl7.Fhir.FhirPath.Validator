@@ -324,7 +324,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			}
 
 			// We have some parameters, so lets check the first one for a boolean result!
-			if (!args.First().CanBeOfType("String", true))
+			if (!args.First().CanBeOfType("string", true))
 			{
 				var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
 				{

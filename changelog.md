@@ -3,6 +3,9 @@
 
 ## Change log ##
 
+### May 6 2024: 5.8.1-rc2
+* Resolve minor issues with defineVariable validation checks
+
 ### May 6 2024: 5.8.1-rc1
 * Update FirelySDK dependency to 5.8.1 (to include the defineVariable function implementation)
 * Update to compatibility with Net80 (and remove the net6 and net7 targets)
