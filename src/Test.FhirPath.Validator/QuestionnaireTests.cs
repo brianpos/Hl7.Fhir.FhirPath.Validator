@@ -14,7 +14,6 @@ using System.Reflection.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.ComponentModel;
 using Hl7.Fhir.Support;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Test.Fhir.FhirPath.Validator
 {
@@ -75,8 +74,7 @@ namespace Test.Fhir.FhirPath.Validator
 						Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Value,
 						Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"LinkId '{linkIdValue}' does not exist in this questionnaire." }
 					};
-					if (expression.Location != null)
-						issue.Location = new[] { $"Line {constExpression.Location.LineNumber}, Position {constExpression.Location.LineNumber}" };
+					BaseFhirPathExpressionVisitor.ReportErrorLocation(constExpression, issue);
 					Outcome.AddIssue(issue);
 				}
 			}

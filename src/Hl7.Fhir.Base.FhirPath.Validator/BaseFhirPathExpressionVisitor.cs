@@ -113,6 +113,10 @@ namespace Hl7.Fhir.FhirPath.Validator
 
 		public Hl7.Fhir.Model.OperationOutcome Outcome { get; } = new Hl7.Fhir.Model.OperationOutcome();
 
+		public static void ReportErrorLocation(Expression expression, OperationOutcome.IssueComponent issue)
+		{
+		}
+
 		private readonly Stack<FhirPathVisitorProps> _stackPropertyContext = new();
 		private readonly Stack<FhirPathVisitorProps> _stackExpressionContext = new();
 		private readonly Stack<FhirPathVisitorProps> _stackAggregateTotal = new();
@@ -426,8 +430,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 						Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
 						Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"String function '{function.FunctionName}' is not supported on {focus.TypeNames()}" }
 					};
-					if (function.Location != null)
-						issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+					ReportErrorLocation(function, issue);
 					Outcome.AddIssue(issue);
 				}
 			}
@@ -459,8 +462,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 							Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
 							Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an 'is' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
 						};
-						if (function.Location != null)
-							issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+						ReportErrorLocation(function, issue);
 						Outcome.AddIssue(issue);
 					}
 					else
@@ -477,8 +479,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 						Code = Hl7.Fhir.Model.OperationOutcome.IssueType.MultipleMatches,
 						Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' can experience unexpected runtime errors when used with a collection" },
 					};
-					if (function.Location != null)
-						issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+					ReportErrorLocation(function, issue);
 					Outcome.AddIssue(issue);
 				}
 			}
@@ -502,8 +503,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 							Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
 							Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an '{function.FunctionName}' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
 						};
-						if (function.Location != null)
-							issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+						ReportErrorLocation(function, issue);
 						Outcome.AddIssue(issue);
 					}
 					else
@@ -526,8 +526,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 							Code = Hl7.Fhir.Model.OperationOutcome.IssueType.MultipleMatches,
 							Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' can experience unexpected runtime errors when used with a collection" },
 						};
-						if (function.Location != null)
-							issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+						ReportErrorLocation(function, issue);
 						Outcome.AddIssue(issue);
 					}
 				}
@@ -635,8 +634,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
 					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Unhandled function '{function.FunctionName}'" }
 				};
-				if (function.Location != null)
-					issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+				ReportErrorLocation(function, issue);
 				Outcome.AddIssue(issue);
 			}
 
@@ -650,8 +648,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 						Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
 						Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"{function.FunctionName} must have a boolean first argument, detected {props.FirstOrDefault()}" }
 					};
-					if (function.Location != null)
-						issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+					ReportErrorLocation(function, issue);
 					Outcome.AddIssue(issue);
 				}
 			}
@@ -665,8 +662,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 						Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
 						Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"{function.FunctionName} must have a boolean first argument, detected {props.FirstOrDefault()}" }
 					};
-					if (function.Location != null)
-						issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+					ReportErrorLocation(function, issue);
 					Outcome.AddIssue(issue);
 				}
 			}
@@ -1001,8 +997,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 								Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Value,
 								Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"prop '{ce.ChildName}' is the choice type, remove the type from the end - {t.ClassMapping.Name}.{ctCP.Name}" }
 							};
-							if (expression.Location != null)
-								issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+							ReportErrorLocation(expression, issue);
 							if (_repeatChildren != null)
 							{
 								if (!_repeatChildren.ContainsKey(ce))
@@ -1041,8 +1036,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 										Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
 										Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"class {childProp.ImplementingType} not found" }
 									};
-									if (expression.Location != null)
-										issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+									ReportErrorLocation(expression, issue);
 									if (_repeatChildren != null)
 									{
 										if (!_repeatChildren.ContainsKey(ce))
@@ -1091,8 +1085,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 										Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
 										Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"class {childProp.ImplementingType} not found" }
 									};
-									if (expression.Location != null)
-										issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+									ReportErrorLocation(expression, issue);
 									if (_repeatChildren != null)
 									{
 										if (!_repeatChildren.ContainsKey(ce))
@@ -1137,8 +1130,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 					issue.Details.Text += $" (did you mean to use the variable '%{ce.ChildName}' : {v.TypeNames()})";
 				}
 
-				if (expression.Location != null)
-					issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+				ReportErrorLocation(expression, issue);
 				if (_repeatChildren != null)
 				{
 					if (!_repeatChildren.ContainsKey(ce))
@@ -1185,8 +1177,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 							Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
 							Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an 'is' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
 						};
-						if (be.Location != null)
-							issue.Location = new[] { $"Line {be.Location.LineNumber}, Position {be.Location.LineNumber}" };
+						ReportErrorLocation(be, issue);
 						Outcome.AddIssue(issue);
 					}
 				}
@@ -1209,8 +1200,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 							Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
 							Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Expression included an 'as' test for {ceTa.Value} where possible types are {string.Join(", ", possibleTypeNames)}" }
 						};
-						if (be.Location != null)
-							issue.Location = new[] { $"Line {be.Location.LineNumber}, Position {be.Location.LineNumber}" };
+						ReportErrorLocation(be, issue);
 						Outcome.AddIssue(issue);
 					}
 					else
@@ -1272,8 +1262,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 						Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Operator '{be.Op}' can experience unexpected runtime errors when used with a collection" },
 						Diagnostics = $"{leftResult} {be.Op} {rightResult}"
 					};
-					if (be.Location != null)
-						issue.Location = new[] { $"Line {be.Location.LineNumber}, Position {be.Location.LineNumber}" };
+					ReportErrorLocation(be, issue);
 					Outcome.AddIssue(issue);
 				}
 			}
@@ -1347,8 +1336,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 				Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotFound,
 				Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"variable '{expression.Name}' not found" }
 			};
-			if (expression.Location != null)
-				issue.Location = new[] { $"Line {expression.Location.LineNumber}, Position {expression.Location.LineNumber}" };
+			ReportErrorLocation(expression, issue);
 			Outcome.AddIssue(issue);
 
 			return r;

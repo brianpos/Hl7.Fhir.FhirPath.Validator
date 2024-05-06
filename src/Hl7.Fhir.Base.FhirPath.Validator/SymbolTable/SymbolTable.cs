@@ -273,8 +273,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
 					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{item.Name}' does not require any parameters" }
 				};
-				//if (item.Location != null)
-				//	issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+				BaseFhirPathExpressionVisitor.ReportErrorLocation(function, issue);
 				outcome.Issue.Add(issue);
 			}
 		}
@@ -288,8 +287,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
 					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{item.Name}' requires a boolean first parameter" }
 				};
-				//if (item.Location != null)
-				//	issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+				BaseFhirPathExpressionVisitor.ReportErrorLocation(function, issue);
 				outcome.Issue.Add(issue);
 				return;
 			}
@@ -303,8 +301,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
 					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{item.Name}' requires a boolean first parameter" }
 				};
-				//if (item.Location != null)
-				//	issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+				BaseFhirPathExpressionVisitor.ReportErrorLocation(function, issue);
 				outcome.Issue.Add(issue);
 				return;
 			}
@@ -344,23 +341,21 @@ namespace Hl7.Fhir.FhirPath.Validator
 					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.NotSupported,
 					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' is not supported on context type '{focus.TypeNames()}'" }
 				};
-				if (function.Location != null)
-					issue.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
+				BaseFhirPathExpressionVisitor.ReportErrorLocation(function, issue);
 				outcome.AddIssue(issue);
 				return false;
 			}
 
 			if (!me.SupportsCollections && focus.IsCollection())
 			{
-				var issueCol = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+				var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
 				{
 					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Warning,
 					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.MultipleMatches,
 					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{function.FunctionName}' can experience unexpected runtime errors when used with a collection" },
 				};
-				if (function.Location != null)
-					issueCol.Location = new[] { $"Line {function.Location.LineNumber}, Position {function.Location.LineNumber}" };
-				outcome.AddIssue(issueCol);
+				BaseFhirPathExpressionVisitor.ReportErrorLocation(function, issue);
+				outcome.AddIssue(issue);
 				return true;
 			}
 
