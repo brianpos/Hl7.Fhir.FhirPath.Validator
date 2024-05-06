@@ -340,6 +340,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			"repeat",
 			"iif",
 			"trace",
+			"defineVariable",
 			"aggregate",
 		}.ToArray();
 
@@ -354,6 +355,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			"single",
 			"where",
 			"trace",
+			"defineVariable",
 			"first",
 			"skip",
 			"take",

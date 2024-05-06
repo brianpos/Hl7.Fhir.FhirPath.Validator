@@ -3,6 +3,11 @@
 
 ## Change log ##
 
+### May 6 2024: 5.8.1-rc1
+* Update FirelySDK dependency to 5.8.1 (to include the defineVariable function implementation)
+* Update to compatibility with Net80 (and remove the net6 and net7 targets)
+* Refactor location in issue setting to a central function (in preparation for location position parsing)
+
 ### December 15 2023: 5.3.0-rc1
 * Correct the error message shown when incorrectly using `ofType` to which shows `as`
 * If the `resolve()` function is performed on a property that resolves to just Resource,
@@ -35,7 +40,7 @@
 * Added SDC functions sum, min, max, avg
 * Added support for positiveInt/unsignedInt/base64Binary/date/instant type conversions for context processing to fhir primitive types
 * Refined debug output to indent content more consistently
-* Implementation of aggegate and $total
+* Implementation of aggregate and $total
 
 ### November 20 2023: 5.3.0-beta5
 * Validate the `iif` function to be valid across any context (but not a collection)

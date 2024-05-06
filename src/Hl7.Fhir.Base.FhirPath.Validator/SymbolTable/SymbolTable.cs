@@ -37,6 +37,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 
 			// Add(new FunctionItem("false", false));
 			// Add(new FunctionItem("null", null));
+			Add(new FunctionDefinition("defineVariable", false, true) { GetReturnType = ReturnsContext, SupportsContext = (props) => true }).Validations.Add(ValidateDefineVariableArguments);
 
 			Add(new FunctionDefinition("today", false, true) { GetReturnType = ReturnsDate }).Validations.Add(ValidateNoArguments);
 			Add(new FunctionDefinition("now", false, true) { GetReturnType = Returns<FhirDateTime> }).Validations.Add(ValidateNoArguments);
@@ -300,6 +301,50 @@ namespace Hl7.Fhir.FhirPath.Validator
 					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
 					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
 					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{item.Name}' requires a boolean first parameter" }
+				};
+				BaseFhirPathExpressionVisitor.ReportErrorLocation(function, issue);
+				outcome.Issue.Add(issue);
+				return;
+			}
+		}
+
+		void ValidateDefineVariableArguments(FunctionCallExpression function, FunctionDefinition item, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
+		{
+			if (args?.Any() == false)
+			{
+				var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+				{
+					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{item.Name}' requires a string first parameter" }
+				};
+				BaseFhirPathExpressionVisitor.ReportErrorLocation(function, issue);
+				outcome.Issue.Add(issue);
+				return;
+			}
+
+			// We have some parameters, so lets check the first one for a boolean result!
+			if (!args.First().CanBeOfType("String", true))
+			{
+				var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+				{
+					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{item.Name}' requires a string first parameter" }
+				};
+				BaseFhirPathExpressionVisitor.ReportErrorLocation(function,  issue);
+				outcome.Issue.Add(issue);
+				return;
+			}
+
+			// Can have an optional second parameter, but no more!
+			if (args.Count() > 2)
+			{
+				var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+				{
+					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Too many parameters, function '{item.Name}' requires a string first parameter, and an optional second parameter (expression)" }
 				};
 				BaseFhirPathExpressionVisitor.ReportErrorLocation(function, issue);
 				outcome.Issue.Add(issue);

@@ -94,7 +94,7 @@ namespace Test.Fhir.FhirPath.Validator
             foreach (var item in source.ListSummaries().Where(s => s.ResourceTypeName == "StructureDefinition"))
             {
                 var sd = source.ResolveByUri(item.ResourceUri) as StructureDefinition;
-                if (sd != null && sd.Kind == StructureDefinition.StructureDefinitionKind.Resource && sd.Abstract == false)
+                if (sd != null && sd.Kind != StructureDefinition.StructureDefinitionKind.Logical && sd.Abstract == false)
                 {
                     var elements = sd.Differential.Element.Where(e => e.Constraint.Any()).ToList();
                     if (elements.Any())
@@ -253,6 +253,17 @@ namespace Test.Fhir.FhirPath.Validator
             {
                 var knownBadInvariants = new[] {
                     "http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-patient ch-pat-3",
+					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-ahvn13-identifier ahvn13-length",
+					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-gln-identifier gln-startswith7601",
+					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-epr-spid-identifier epr-spid-startswith76133761",
+					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-epr-spid-identifier epr-spid-length",
+					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-gln-identifier gln-length",
+					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-veka-identifier veka-length",
+					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-veka-identifier veka-startswith807560",
+					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-epr-spid-identifier epr-spid-modulus-10",
+					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-gln-identifier gln-modulus-10",
+					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-ahvn13-identifier ahvn13-digit-check",
+					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-ahvn13-identifier ahvn13-startswith756",
                 };
 
                 return InvariantsInIG("ch.fhir.ig.ch-core", "4.0.0-ballot", knownBadInvariants);
