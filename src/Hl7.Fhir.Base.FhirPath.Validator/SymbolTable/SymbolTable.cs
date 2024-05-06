@@ -78,7 +78,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 
 		public FunctionDefinition Add(FunctionDefinition item,
             FunctionDefinition.GetReturnTypeDelegate getReturnType,
-			Action<FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome> validate)
+			Action<FunctionCallExpression, FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome> validate)
 		{
 			item.GetReturnType = getReturnType;
 			item.Validations.Add(validate);
@@ -87,7 +87,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 		}
 		public FunctionDefinition Add(FunctionDefinition item,
 			FunctionDefinition.GetReturnTypeDelegate getReturnType,
-			List<Action<FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome>> validate)
+			List<Action<FunctionCallExpression, FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome>> validate)
 		{
 			item.GetReturnType = getReturnType;
 			item.Validations.AddRange(validate);
@@ -198,6 +198,19 @@ namespace Hl7.Fhir.FhirPath.Validator
 			return allMaps.Select(m => new NodeProps(m)).ToList();
 		}
 
+		/// <summary>
+		/// Returns the same type as the input context (such as with first() etc)
+		/// </summary>
+		/// <param name="item"></param>
+		/// <param name="focus"></param>
+		/// <param name="args"></param>
+		/// <param name="outcome"></param>
+		/// <returns></returns>
+		List<NodeProps> ReturnsContext(FunctionDefinition item, FhirPathVisitorProps focus, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
+		{
+			return focus.Types.ToList();
+		}
+
 		private void ScanTypeForNewChildPropTypes(List<ClassMapping> allMaps, ClassMapping focusType)
 		{
 			// System.Diagnostics.Trace.WriteLine($"Scanning: {focusType.Name}");
@@ -250,7 +263,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			}
 		}
 
-		void ValidateNoArguments(FunctionDefinition item, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
+		void ValidateNoArguments(FunctionCallExpression function, FunctionDefinition item, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
 		{
 			if (args?.Any() == true)
 			{
@@ -265,7 +278,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 				outcome.Issue.Add(issue);
 			}
 		}
-		void ValidateRequiredBooleanFirstArgument(FunctionDefinition item, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
+		void ValidateRequiredBooleanFirstArgument(FunctionCallExpression function, FunctionDefinition item, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
 		{
 			if (args?.Any() == false)
 			{

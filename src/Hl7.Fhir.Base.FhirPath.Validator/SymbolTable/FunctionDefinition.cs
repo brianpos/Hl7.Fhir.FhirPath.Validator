@@ -1,5 +1,6 @@
 ﻿using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
+using Hl7.FhirPath.Expressions;
 using System;
 using System.Collections.Generic;
 
@@ -33,21 +34,20 @@ namespace Hl7.Fhir.FhirPath.Validator
 			Name = name;
 			SupportsCollections = supportsCollections;
 			SupportedAtRoot = supportedAtRoot;
-
 		}
 		public string Name { get; }
 		public bool SupportsCollections { get; }
 		public bool SupportedAtRoot { get; }
 		public List<FunctionContext> SupportedContexts { get; } = new();
 		public GetReturnTypeDelegate GetReturnType { get; set; }
-		public List<Action<FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome>> Validations { get; set; } = new List<Action<FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome>>();
+		public List<Action<FunctionCallExpression, FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome>> Validations { get; set; } = new List<Action<FunctionCallExpression, FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome>>();
 
 		/// <summary>
 		/// Fluent mode to Add to the Validations collection - returns <b>this</b> so that it can just be chained to add more
 		/// </summary>
 		/// <param name="validationRule"></param>
 		/// <returns></returns>
-		public FunctionDefinition AddValidation(Action<FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome> validationRule) 
+		public FunctionDefinition AddValidation(Action<FunctionCallExpression, FunctionDefinition, IEnumerable<FhirPathVisitorProps>, OperationOutcome> validationRule) 
 		{
 			Validations.Add(validationRule);
 			return this;

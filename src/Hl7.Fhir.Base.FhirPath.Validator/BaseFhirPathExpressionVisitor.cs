@@ -380,7 +380,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 				// Perform any validations
 				foreach (var validation in fd.Validations)
 				{
-					validation(fd, props, Outcome);
+					validation(function, fd, props, Outcome);
 				}
 
 				// check the context of the function
