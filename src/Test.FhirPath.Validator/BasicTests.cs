@@ -851,6 +851,23 @@ namespace Test.Fhir.FhirPath.Validator
 		}
 
 		[TestMethod]
+		public void TestMethodVariableUsingDefinitionPath()
+		{
+			string expression = "%surprise.endpoint";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.UseVariableAsName = true;
+			visitor.AddInputType(typeof(Questionnaire));
+			visitor.RegisterVariable("surprise", "Subscription.channel");
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
 		public void TestMethodDefineVariable()
 		{
 			string expression = "defineVariable('test', id).select(%test)";

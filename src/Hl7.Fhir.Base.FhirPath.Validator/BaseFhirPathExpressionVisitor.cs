@@ -138,6 +138,71 @@ namespace Hl7.Fhir.FhirPath.Validator
 			RegisterVariable(name, cm);
 		}
 
+		/// <summary>
+		/// Walk a path to a property (as also used in SetContext)
+		/// </summary>
+		/// <param name="name"></param>
+		/// <param name="definitionPath"></param>
+		public void RegisterVariable(string name, string definitionPath)
+		{
+			if (variables.ContainsKey(name))
+				return;
+			var path = definitionPath.Replace("[x]", "");
+			string typeName = path;
+			if (path.Contains('.'))
+			{
+				typeName = path.Substring(0, path.IndexOf("."));
+				path = path.Substring(path.IndexOf(".") + 1);
+			}
+			else
+			{
+				path = null;
+			}
+			var rootType = _mi.GetTypeForFhirType(typeName);
+
+			if (rootType != null)
+			{
+				if (string.IsNullOrEmpty(path))
+				{
+					RegisterVariable(name, rootType);
+					return;
+				}
+
+				var resourceType = rootType; // don't set this till we get to the end, as it could be different
+				var nodes = path.Split('.').ToList();
+				IEnumerable<ClassMapping> cm = new[] { _mi.FindOrImportClassMapping(rootType) }.Where(v => v != null).ToList();
+				while (cm.Any() && nodes.Any())
+				{
+					var pm = cm.Select(cm => cm.FindMappedElementByName(nodes[0]) ?? cm.FindMappedElementByChoiceName(nodes[0]))
+						.Where(c => c != null)
+						.ToList();
+					cm = pm.SelectMany(pm2 =>
+					{
+						if (pm2.Choice == ChoiceType.DatatypeChoice && pm2.FhirType.Length == 1 && pm2.FhirType[0].Name == "DataType")
+						{
+							// This is the set of open types
+							return _openTypes.Select(ot => _mi.FindOrImportClassMapping(ot));
+						}
+						if (pm2.Name != nodes[0])
+							return pm2?.FhirType.Where(t => nodes[0].EndsWith(t.Name)).Select(ft => _mi.FindOrImportClassMapping(ft));
+						return pm2?.FhirType.Select(ft => _mi.FindOrImportClassMapping(ft));
+					}).Where(pm => pm != null).ToList();
+					nodes.RemoveAt(0);
+				}
+
+				FhirPathVisitorProps types = new FhirPathVisitorProps();
+				foreach (var tcm in cm)
+				{
+					types.Types.Add(new NodeProps(tcm));
+				}
+				RegisterVariable(name, types);
+			}
+			else
+			{
+				throw new ApplicationException($"Could not result type: {typeName}");
+			}
+		}
+
 		public void RegisterVariable(string name, ClassMapping cm)
 		{
 			FhirPathVisitorProps types = new FhirPathVisitorProps();
