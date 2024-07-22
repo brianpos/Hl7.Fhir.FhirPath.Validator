@@ -24,6 +24,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			Add(new FunctionDefinition("highBoundary").AddContexts(mi, "date-date,instant-instant,decimal-decimal,integer-integer,dateTime-dateTime,time-time,Quantity-Quantity"));
 
 			Add(new FunctionDefinition("length").AddContexts(mi, "string-integer")).Validations.Add(ValidateNoArguments);
+			Add(new FunctionDefinition("indexOf").AddContexts(mi, "string-integer")).Validations.Add(ValidateRequiredStringFirstArgument);
 
 			Add(new FunctionDefinition("toBoolean").AddContexts(mi, "boolean-boolean,integer-boolean,decimal-boolean,string-boolean")).Validations.Add(ValidateNoArguments);
 			Add(new FunctionDefinition("toInteger").AddContexts(mi, "integer-integer,string-integer,boolean-integer")).Validations.Add(ValidateNoArguments);
@@ -301,6 +302,36 @@ namespace Hl7.Fhir.FhirPath.Validator
 					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
 					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
 					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{item.Name}' requires a boolean first parameter" }
+				};
+				BaseFhirPathExpressionVisitor.ReportErrorLocation(function, issue);
+				outcome.Issue.Add(issue);
+				return;
+			}
+		}
+
+		void ValidateRequiredStringFirstArgument(FunctionCallExpression function, FunctionDefinition item, IEnumerable<FhirPathVisitorProps> args, OperationOutcome outcome)
+		{
+			if (args?.Any() == false)
+			{
+				var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+				{
+					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{item.Name}' requires a string first parameter" }
+				};
+				BaseFhirPathExpressionVisitor.ReportErrorLocation(function, issue);
+				outcome.Issue.Add(issue);
+				return;
+			}
+
+			// We have some parameters, so lets check the first one for a boolean result!
+			if (!args.First().CanBeOfType("string", true))
+			{
+				var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+				{
+					Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+					Code = Hl7.Fhir.Model.OperationOutcome.IssueType.Invalid,
+					Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Function '{item.Name}' requires a string first parameter" }
 				};
 				BaseFhirPathExpressionVisitor.ReportErrorLocation(function, issue);
 				outcome.Issue.Add(issue);

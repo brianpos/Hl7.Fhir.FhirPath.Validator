@@ -34,6 +34,14 @@ namespace Hl7.Fhir.FhirPath.Validator
 		public FhirPathVisitorProps RootContext { get; } = new FhirPathVisitorProps() { isRoot = true };
 
 		/// <summary>
+		/// Permit navigating to a variable without the % prefix (but log a warning anyway)
+		/// </summary>
+		/// <remarks>
+		/// This was introduced for supporting FML execution rules (do not enable outside that context)
+		/// </remarks>
+		public bool UseVariableAsName { get; set;  }
+
+		/// <summary>
 		/// Set the Context of the expression to verify 
 		/// (and also set the resource, rootResource and context variables)
 		/// </summary>
@@ -302,7 +310,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			"split",
 			"join",
             // Section 5.6 in the spec (normative)
-            "indexOf",
+            // "indexOf", // handled in the symbol table
 			"substring",
 			"startsWith",
 			"endsWith",
@@ -1171,6 +1179,14 @@ namespace Hl7.Fhir.FhirPath.Validator
 				{
 					var v = variables[ce.ChildName];
 					issue.Details.Text += $" (did you mean to use the variable '%{ce.ChildName}' : {v.TypeNames()})";
+					if (this.UseVariableAsName)
+					{
+						issue.Severity = OperationOutcome.IssueSeverity.Warning;
+						foreach (var vt in v.Types)
+						{
+							result.Types.Add(vt);
+						}
+					}
 				}
 
 				ReportErrorLocation(expression, issue);

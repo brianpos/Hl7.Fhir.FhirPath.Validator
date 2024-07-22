@@ -527,6 +527,38 @@ namespace Test.Fhir.FhirPath.Validator
         }
 
         [TestMethod]
+		public void TestStringIndexOf()
+		{
+			string expression = "name.family.first().indexOf('a')";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success, "Expected success");
+			Assert.AreEqual("integer", r.ToString());
+		}
+
+		[TestMethod]
+		public void TestStringIndexOfOnDate()
+		{
+			string expression = "birthDate.indexOf(':')";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsFalse(visitor.Outcome.Success, "Expected failure");
+			Assert.AreEqual("", r.ToString());
+		}
+
+		[TestMethod]
         public void TestHighBoundarySymbolTable()
         {
             string expression = "gender.highBoundary()";
@@ -784,6 +816,39 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success);
         }
+
+		[TestMethod]
+		public void TestMethodVariableUsingNoPrefix()
+		{
+			string expression = "surprise.family";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Questionnaire));
+			visitor.RegisterVariable("surprise", typeof(Hl7.Fhir.Model.HumanName));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
+
+		[TestMethod]
+		public void TestMethodVariableUsingNoPrefix2()
+		{
+			string expression = "surprise.family";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.UseVariableAsName = true;
+			visitor.AddInputType(typeof(Questionnaire));
+			visitor.RegisterVariable("surprise", typeof(Hl7.Fhir.Model.HumanName));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success);
+		}
 
 		[TestMethod]
 		public void TestMethodDefineVariable()
