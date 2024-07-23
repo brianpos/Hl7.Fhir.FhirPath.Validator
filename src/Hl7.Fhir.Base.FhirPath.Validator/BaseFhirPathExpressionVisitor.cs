@@ -199,7 +199,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			}
 			else
 			{
-				throw new ApplicationException($"Could not result type: {typeName}");
+				throw new ApplicationException($"Could not resolve type: {typeName}");
 			}
 		}
 
