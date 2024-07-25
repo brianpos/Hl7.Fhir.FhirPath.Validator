@@ -113,9 +113,14 @@ namespace Test.Fhir.FhirPath.Validator
                 visitor.RegisterVariable("resource", t);
             }
             VerifyExpression(t, expression, searchType, expectSuccessOutcome, expectValidSearch, spd, visitor);
-        }
 
-        private void VerifyExpression(Type resourceType, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, ModelInfo.SearchParamDefinition spd, FhirPathExpressionVisitor visitor)
+			// Also verify that the echo visitor will reproduce the exact expression (with whitespace)
+			var expr = _compiler.Parse(expression);
+			var echoExpr = expr.EchoExpression();
+			Assert.AreEqual(expression, echoExpr, "Echo should be the same");
+		}
+
+		private void VerifyExpression(Type resourceType, string expression, SearchParamType searchType, bool expectSuccessOutcome, bool expectValidSearch, ModelInfo.SearchParamDefinition spd, FhirPathExpressionVisitor visitor)
         {
             var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);

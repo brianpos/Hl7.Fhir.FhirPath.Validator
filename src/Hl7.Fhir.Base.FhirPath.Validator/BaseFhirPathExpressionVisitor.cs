@@ -122,8 +122,17 @@ namespace Hl7.Fhir.FhirPath.Validator
 
 		public Hl7.Fhir.Model.OperationOutcome Outcome { get; } = new Hl7.Fhir.Model.OperationOutcome();
 
+		const string ExtNamespace = "http://fhirpath-lab.com/StructureDefinition/fhirpath-error-location";
 		public static void ReportErrorLocation(Expression expression, OperationOutcome.IssueComponent issue)
 		{
+			if (expression.Location is FhirPathExpressionLocationInfo pi)
+			{
+				issue.Location = new[] { $"Line {pi.LineNumber}, Column {pi.LinePosition} (Position: {pi.RawPosition} Length: {pi.Length})" };
+				var ext = new Extension() { Url = ExtNamespace };
+				ext.AddExtension("position", new Integer(pi.RawPosition));
+				ext.AddExtension("length", new Integer(pi.Length));
+				issue.Extension.Add(ext);
+			}
 		}
 
 		private readonly Stack<FhirPathVisitorProps> _stackPropertyContext = new();

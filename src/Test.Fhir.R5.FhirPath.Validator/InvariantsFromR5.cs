@@ -169,6 +169,11 @@ namespace Test.Fhir.FhirPath.Validator
             Assert.IsTrue((visitor.Outcome.Success && visitor.Outcome.Warnings == 0) == expectSuccess);
             if (expectSuccess)
                 Assert.AreEqual("boolean", r.ToString(), "Invariants must return a boolean");
-        }
-    }
+
+			// Also verify that the echo visitor will reproduce the exact expression (with whitespace)
+			var expr = _compiler.Parse(expression);
+			var echoExpr = expr.EchoExpression();
+			Assert.AreEqual(expression, echoExpr, "Echo should be the same");
+		}
+	}
 }

@@ -27,7 +27,7 @@ namespace Test.Fhir.FhirPath.Validator
 				  Hl7.Fhir.Model.ModelInfo.OpenTypes);
 		}
 
-        [TestInitialize]
+		[TestInitialize]
         public void Init()
         {
             // include all the conformance types
@@ -136,8 +136,8 @@ namespace Test.Fhir.FhirPath.Validator
 			{
 				var t = InvariantsInUsCoreIG;
 			}
-            // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
-            Console.WriteLine($"Context: {type}");
+			// string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
+			Console.WriteLine($"Context: {type}");
             Console.WriteLine($"Canonical: {canonical}");
             Console.WriteLine($"Invariant key: {key}");
             Console.WriteLine($"Expression:\r\n{expression}");
@@ -148,7 +148,7 @@ namespace Test.Fhir.FhirPath.Validator
 			var res = source.ResolveByCanonicalUri(canonical);
 			if (res is StructureDefinition sd && sd.Type == "Extension")
 				visitor.SetContextExtension(sd);
-            var pe = _compiler.Parse(expression);
+			var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
             Console.WriteLine($"Result: {r}");
             Console.WriteLine("---------");
@@ -157,9 +157,14 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue((visitor.Outcome.Success && visitor.Outcome.Warnings == 0) == expectSuccess);
             Assert.AreEqual("boolean", r.ToString(), "Invariants must return a boolean");
-        }
 
-        public static IEnumerable<object[]> InvariantsInSdcIG
+			// Also verify that the echo visitor will reproduce the exact expression (with whitespace)
+			var expr = _compiler.Parse(expression);
+			var echoExpr = expr.EchoExpression();
+			Assert.AreEqual(expression, echoExpr, "Echo should be the same");
+		}
+
+		public static IEnumerable<object[]> InvariantsInSdcIG
         {
             get
             {
@@ -180,17 +185,17 @@ namespace Test.Fhir.FhirPath.Validator
 			{
 				var t = InvariantsInSdcIG;
 			}
-            // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
-            Console.WriteLine($"Context: {type}");
+			// string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
+			Console.WriteLine($"Context: {type}");
             Console.WriteLine($"Canonical: {canonical}");
             Console.WriteLine($"Invariant key: {key}");
             Console.WriteLine($"Expression:\r\n{expression}");
             Console.WriteLine("---------");
             var visitor = CreateFhirPathValidator("hl7.fhir.uv.sdc");
             visitor.SetContext(type);
-            var source = _ig_source["hl7.fhir.uv.sdc"];
-            var res = source.ResolveByCanonicalUri(canonical);
-            if (res is StructureDefinition sd && sd.Type == "Extension")
+			var source = _ig_source["hl7.fhir.uv.sdc"];
+			var res = source.ResolveByCanonicalUri(canonical);
+			if (res is StructureDefinition sd && sd.Type == "Extension")
                 visitor.SetContextExtension(sd);
             var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
@@ -201,9 +206,14 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success == expectSuccess);
             Assert.AreEqual("boolean", r.ToString(), "Invariants must return a boolean");
-        }
 
-        public static IEnumerable<object[]> InvariantsInAuBaseIG
+			// Also verify that the echo visitor will reproduce the exact expression (with whitespace)
+			var expr = _compiler.Parse(expression);
+			var echoExpr = expr.EchoExpression();
+			Assert.AreEqual(expression, echoExpr, "Echo should be the same");
+		}
+
+		public static IEnumerable<object[]> InvariantsInAuBaseIG
         {
             get
             {
@@ -223,20 +233,20 @@ namespace Test.Fhir.FhirPath.Validator
 			{
 				var t = InvariantsInAuBaseIG;
 			}
-            // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
-            Console.WriteLine($"Context: {type}");
+			// string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
+			Console.WriteLine($"Context: {type}");
             Console.WriteLine($"Canonical: {canonical}");
             Console.WriteLine($"Invariant key: {key}");
             Console.WriteLine($"Expression:\r\n{expression}");
             Console.WriteLine("---------");
             var visitor = CreateFhirPathValidator("hl7.fhir.au.base");
 
-            visitor.SetContext(type);
+			visitor.SetContext(type);
 			var source = _ig_source["hl7.fhir.au.base"];
 			var res = source.ResolveByCanonicalUri(canonical);
 			if (res is StructureDefinition sd && sd.Type == "Extension")
 				visitor.SetContextExtension(sd);
-            var pe = _compiler.Parse(expression);
+			var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
             Console.WriteLine($"Result: {r}");
             Console.WriteLine("---------");
@@ -245,9 +255,14 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success == expectSuccess);
             Assert.AreEqual("boolean", r.ToString(), "Invariants must return a boolean");
-        }
 
-        public static IEnumerable<object[]> InvariantsInChCoreIG
+			// Also verify that the echo visitor will reproduce the exact expression (with whitespace)
+			var expr = _compiler.Parse(expression);
+			var echoExpr = expr.EchoExpression();
+			Assert.AreEqual(expression, echoExpr, "Echo should be the same");
+		}
+
+		public static IEnumerable<object[]> InvariantsInChCoreIG
         {
             get
             {
@@ -264,7 +279,7 @@ namespace Test.Fhir.FhirPath.Validator
 					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-gln-identifier gln-modulus-10",
 					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-ahvn13-identifier ahvn13-digit-check",
 					"http://fhir.ch/ig/ch-core/StructureDefinition/ch-core-ahvn13-identifier ahvn13-startswith756",
-                };
+				};
 
                 return InvariantsInIG("ch.fhir.ig.ch-core", "4.0.0-ballot", knownBadInvariants);
             }
@@ -278,8 +293,8 @@ namespace Test.Fhir.FhirPath.Validator
 			{
 				var t = InvariantsInChCoreIG;
 			}
-            // string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
-            Console.WriteLine($"Context: {type}");
+			// string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
+			Console.WriteLine($"Context: {type}");
             Console.WriteLine($"Canonical: {canonical}");
             Console.WriteLine($"Invariant key: {key}");
             Console.WriteLine($"Expression:\r\n{expression}");
@@ -290,7 +305,7 @@ namespace Test.Fhir.FhirPath.Validator
 			var res = source.ResolveByCanonicalUri(canonical);
 			if (res is StructureDefinition sd && sd.Type == "Extension")
 				visitor.SetContextExtension(sd);
-            var pe = _compiler.Parse(expression);
+			var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
             Console.WriteLine($"Result: {r}");
             Console.WriteLine("---------");
@@ -299,9 +314,14 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success == expectSuccess);
             Assert.AreEqual("boolean", r.ToString(), "Invariants must return a boolean");
-        }
 
-        public static IEnumerable<object[]> InvariantsInSdohClinicalCareIG
+			// Also verify that the echo visitor will reproduce the exact expression (with whitespace)
+			var expr = _compiler.Parse(expression);
+			var echoExpr = expr.EchoExpression();
+			Assert.AreEqual(expression, echoExpr, "Echo should be the same");
+		}
+
+		public static IEnumerable<object[]> InvariantsInSdohClinicalCareIG
         {
             get
             {
@@ -333,7 +353,7 @@ namespace Test.Fhir.FhirPath.Validator
 			var res = source.ResolveByCanonicalUri(canonical);
 			if (res is StructureDefinition sd && sd.Type == "Extension")
 				visitor.SetContextExtension(sd);
-            var pe = _compiler.Parse(expression);
+			var pe = _compiler.Parse(expression);
             var r = pe.Accept(visitor);
             Console.WriteLine($"Result: {r}");
             Console.WriteLine("---------");
@@ -342,6 +362,11 @@ namespace Test.Fhir.FhirPath.Validator
             Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
             Assert.IsTrue(visitor.Outcome.Success == expectSuccess);
             Assert.AreEqual("boolean", r.ToString(), "Invariants must return a boolean");
-        }
-    }
+
+			// Also verify that the echo visitor will reproduce the exact expression (with whitespace)
+			var expr = _compiler.Parse(expression);
+			var echoExpr = expr.EchoExpression();
+			Assert.AreEqual(expression, echoExpr, "Echo should be the same");
+		}
+	}
 }
