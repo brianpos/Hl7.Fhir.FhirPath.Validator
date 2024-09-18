@@ -4,7 +4,7 @@
     <TargetFrameworks>net80;net462;netstandard2.1;netstandard2.0</TargetFrameworks>
     <AssemblyName>Hl7.Fhir.Base.FhirPath.Validator</AssemblyName>
     <PackageId>brianpos.Fhir.Base.FhirPath.Validator</PackageId>
-    <Version>5.10.0-rc1</Version>
+    <Version>5.10.2-rc1</Version>
     <Title>HL7 Fhir FhirPath Static Validator (base)</Title>
     <Summary>Static Analysis tool to validate fhirpath expressions against a specific version of the fhir specification</Summary>
     <Description>
@@ -34,7 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Hl7.Fhir.Conformance" Version="5.10.0" />
+    <PackageReference Include="Hl7.Fhir.Conformance" Version="5.10.2" />
   </ItemGroup>
 
   <ItemGroup>
