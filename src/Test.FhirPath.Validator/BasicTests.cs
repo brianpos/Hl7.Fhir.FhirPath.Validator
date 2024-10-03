@@ -527,6 +527,145 @@ namespace Test.Fhir.FhirPath.Validator
         }
 
         [TestMethod]
+		public void TestPropPaths()
+		{
+			string expression = "Patient.contact.where(relationship.exists()).telecom.first().value";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success, "Expected success");
+			Assert.AreEqual("string", r.ToString());
+
+			var paths = visitor.PathsVisited.ToList();
+			Console.WriteLine(String.Join("\n", visitor.PathsVisited));
+			Assert.AreEqual(4, paths.Count);
+			Assert.IsTrue(paths.Contains("Patient.contact"));
+			Assert.IsTrue(paths.Contains("Patient.contact.relationship"));
+			Assert.IsTrue(paths.Contains("Patient.contact.telecom"));
+			Assert.IsTrue(paths.Contains("Patient.contact.telecom.value"));
+		}
+
+		[TestMethod]
+		public void TestPropPathsWithSelect()
+		{
+			string expression = "Patient.select(contact).where(relationship.exists()).telecom.first().value";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success, "Expected success");
+			Assert.AreEqual("string", r.ToString());
+
+			var paths = visitor.PathsVisited.ToList();
+			Console.WriteLine(String.Join("\n", visitor.PathsVisited));
+			Assert.AreEqual(4, paths.Count);
+			Assert.IsTrue(paths.Contains("Patient.contact"));
+			Assert.IsTrue(paths.Contains("Patient.contact.relationship"));
+			Assert.IsTrue(paths.Contains("Patient.contact.telecom"));
+			Assert.IsTrue(paths.Contains("Patient.contact.telecom.value"));
+		}
+
+		[TestMethod]
+		public void TestPropPathsWithExtension()
+		{
+			string expression = "Patient.extension('http://hl7.org/fhir/StructureDefinition/patient-interpreterRequired').first().value.ofType(boolean)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success, "Expected success");
+			Assert.AreEqual("boolean", r.ToString());
+
+			var paths = visitor.PathsVisited.ToList();
+			Console.WriteLine(String.Join("\n", visitor.PathsVisited));
+			Assert.AreEqual(2, paths.Count);
+			Assert.IsTrue(paths.Contains("Patient.extension"));
+			Assert.IsTrue(paths.Contains("Patient.extension.value"));
+		}
+
+		[TestMethod]
+		public void TestPropPathsWithDatatypeChoice()
+		{
+			string expression = "Patient.deceased";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success, "Expected success");
+			Assert.AreEqual("boolean, dateTime", r.ToString());
+
+			var paths = visitor.PathsVisited.ToList();
+			Console.WriteLine(String.Join("\n", visitor.PathsVisited));
+			Assert.AreEqual(1, paths.Count);
+			Assert.IsTrue(paths.Contains("Patient.deceased"));
+		}
+
+		[TestMethod, Ignore]
+		public void TestPropPathsWithLogicalOr()
+		{
+			string expression = "Patient.select(contact.telecom | telecom).value";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success, "Expected success");
+			Assert.AreEqual("string[]", r.ToString());
+
+			var paths = visitor.PathsVisited.ToList();
+			Console.WriteLine(String.Join("\n", visitor.PathsVisited));
+			Assert.AreEqual(5, paths.Count);
+			Assert.IsTrue(paths.Contains("Patient.contact"));
+			Assert.IsTrue(paths.Contains("Patient.contact.telecom"));
+			Assert.IsTrue(paths.Contains("Patient.contact.telecom.value"));
+			Assert.IsTrue(paths.Contains("Patient.telecom"));
+			Assert.IsTrue(paths.Contains("Patient.telecom.value"));
+		}
+
+		[TestMethod]
+		public void TestPropPathsWithContained()
+		{
+			string expression = "Patient.contained.ofType(RelatedPerson).telecom.first().value";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success, "Expected success");
+			Assert.AreEqual("string", r.ToString());
+
+			var paths = visitor.PathsVisited.ToList();
+			Console.WriteLine(String.Join("\n", visitor.PathsVisited));
+			Assert.AreEqual(3, paths.Count);
+			Assert.IsTrue(paths.Contains("Patient.contained"));
+			Assert.IsTrue(paths.Contains("RelatedPerson.telecom"));
+			Assert.IsTrue(paths.Contains("RelatedPerson.telecom.value"));
+		}
+
+		[TestMethod]
 		public void TestStringIndexOf()
 		{
 			string expression = "name.family.first().indexOf('a')";

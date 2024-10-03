@@ -13,12 +13,12 @@ namespace Hl7.Fhir.FhirPath.Validator
         public bool isRoot;
         public readonly Collection<NodeProps> Types = new();
 
-        public void AddType(ModelInspector mi, Type type, bool forceCollection = false)
+        public void AddType(ModelInspector mi, Type type, bool forceCollection = false, string path = null)
         {
             var cm = mi.FindOrImportClassMapping(type);
             if (cm != null)
             {
-                var np = new NodeProps(cm);
+                var np = new NodeProps(cm, path: null);
                 if (forceCollection)
                     np = np.AsCollection();
                 Types.Add(np);
@@ -102,7 +102,7 @@ namespace Hl7.Fhir.FhirPath.Validator
             FhirPathVisitorProps result = new();
             foreach (var t in this.Types)
             {
-                result.Types.Add(new NodeProps(t.ClassMapping, t.PropertyMapping) { IsCollection = false });
+                result.Types.Add(new NodeProps(t.ClassMapping, t.PropertyMapping, path: t.Path) { IsCollection = false });
             }
             return result;
         }

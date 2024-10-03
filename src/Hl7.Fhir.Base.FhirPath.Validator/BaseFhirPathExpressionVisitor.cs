@@ -30,6 +30,9 @@ namespace Hl7.Fhir.FhirPath.Validator
 			_table = new SymbolTable(mi, SupportedResources, OpenTypes);
 		}
 
+		public IEnumerable<string> PathsVisited => _pathsVisited;
+
+		private List<string> _pathsVisited = new List<string>();
 		private SymbolTable _table;
 		public FhirPathVisitorProps RootContext { get; } = new FhirPathVisitorProps() { isRoot = true };
 
@@ -245,7 +248,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			if (cm != null && !_inputTypes.Contains(cm))
 			{
 				_inputTypes.Add(cm);
-				RootContext.Types.Add(new NodeProps(cm));
+				RootContext.Types.Add(new NodeProps(cm, path: cm.Name));
 			}
 		}
 
@@ -254,7 +257,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			if (!_inputTypes.Contains(cm))
 			{
 				_inputTypes.Add(cm);
-				RootContext.Types.Add(new NodeProps(cm));
+				RootContext.Types.Add(new NodeProps(cm, path: cm.Name));
 			}
 		}
 
@@ -625,7 +628,12 @@ namespace Hl7.Fhir.FhirPath.Validator
 			else if (function.FunctionName == "count")
 				outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.Integer));
 			else if (function.FunctionName == "extension")
-				outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.Extension), true);
+			{
+				var path = $"{focus.Types.FirstOrDefault().Path}.extension";
+				outputProps.AddType(_mi, typeof(Hl7.Fhir.Model.Extension), true, path);
+				if (!_pathsVisited.Contains(path))
+					_pathsVisited.Add(path);
+			}
 			else if (mathFuncs.Contains(function.FunctionName))
 			{
 				foreach (var t in focus.Types)
@@ -636,7 +644,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 				foreach (var t in focus.Types)
 				{
 					if (function.FunctionName == "first" || function.FunctionName == "last" || function.FunctionName == "tail")
-						outputProps.Types.Add(new NodeProps(t.ClassMapping, t.PropertyMapping) { IsCollection = false });
+						outputProps.Types.Add(new NodeProps(t.ClassMapping, t.PropertyMapping, path: t.Path) { IsCollection = false });
 					else
 						outputProps.Types.Add(t);
 				}
@@ -1082,6 +1090,8 @@ namespace Hl7.Fhir.FhirPath.Validator
 					result.Types.Add(rFocus.Types.FirstOrDefault());
 					if (_repeatChildren?.ContainsKey(ce) == true)
 						_repeatChildren[ce] = null;
+					// if (!_pathsVisited.Contains(ce.ChildName))
+					// 	_pathsVisited.Add(ce.ChildName);
 					return;
 				}
 				else
@@ -1097,6 +1107,8 @@ namespace Hl7.Fhir.FhirPath.Validator
 							result.AddType(_mi, rt, rFocus.IsCollection());
 							if (_repeatChildren?.ContainsKey(ce) == true)
 								_repeatChildren[ce] = null;
+						//	if (!_pathsVisited.Contains(ce.ChildName))
+						//		_pathsVisited.Add(ce.ChildName);
 							return;
 						}
 					}
@@ -1111,7 +1123,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 					var childProp = t.ClassMapping.FindMappedElementByName(ce.ChildName);
 					if (childProp == null)
 					{
-						// Check if this is a choice type (using the choicename in the type is not valid)
+						// Check if this is a choice type (using the choice name in the type is not valid)
 						var ctCP = t.ClassMapping.FindMappedElementByChoiceName(ce.ChildName);
 						if (ctCP != null)
 						{
@@ -1139,6 +1151,9 @@ namespace Hl7.Fhir.FhirPath.Validator
 
 						if (childProp.Choice == ChoiceType.ResourceChoice)
 						{
+							var path = $"{t.Path}.{ce.ChildName}";
+							if (!_pathsVisited.Contains(path))
+								_pathsVisited.Add(path);
 							foreach (var rt in _supportedResources)
 							{
 								if (!_mi.IsKnownResource(rt))
@@ -1147,7 +1162,9 @@ namespace Hl7.Fhir.FhirPath.Validator
 								if (cm != null)
 								{
 									// System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
-									result.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
+									result.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()) { Path = cm.Name });
+									// if (!_pathsVisited.Contains(cm.Name))
+									//	_pathsVisited.Add(cm.Name);
 									propFound = true;
 									if (_repeatChildren?.ContainsKey(ce) == true)
 										_repeatChildren[ce] = null;
@@ -1179,6 +1196,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 								var cm = _mi.FindOrImportClassMapping(ft);
 								if (cm != null)
 								{
+									var path = $"{t.Path}.{ce.ChildName}";
 									if (ft.FullName == "Hl7.Fhir.Model.DataType" && t.ClassMapping.Name == "Extension")
 									{
 										// List the actual fhir types valid in extensions
@@ -1188,7 +1206,9 @@ namespace Hl7.Fhir.FhirPath.Validator
 											if (cme != null)
 											{
 												// System.Diagnostics.Trace.WriteLine($"read {childProp.Name} {rt}");
-												result.Types.Add(new NodeProps(cme, childProp, rFocus.IsCollection()));
+												result.Types.Add(new NodeProps(cme, childProp, rFocus.IsCollection(), path: path));
+												if (!_pathsVisited.Contains(path))
+													_pathsVisited.Add(path);
 												propFound = true;
 												if (_repeatChildren?.ContainsKey(ce) == true)
 													_repeatChildren[ce] = null;
@@ -1196,7 +1216,9 @@ namespace Hl7.Fhir.FhirPath.Validator
 										}
 										break;
 									}
-									result.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
+									result.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection(), path: path));
+									if (!_pathsVisited.Contains(path))
+										_pathsVisited.Add(path);
 									propFound = true;
 									if (_repeatChildren?.ContainsKey(ce) == true)
 										_repeatChildren[ce] = null;
@@ -1229,7 +1251,10 @@ namespace Hl7.Fhir.FhirPath.Validator
 								var cm = _mi.FindOrImportClassMapping(ct);
 								if (cm != null)
 								{
-									result.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection()));
+									var path = $"{t.Path}.{ce.ChildName}";
+									result.Types.Add(new NodeProps(cm, childProp, rFocus.IsCollection(), path: path));
+									if (!_pathsVisited.Contains(path))
+										_pathsVisited.Add(path);
 									propFound = true;
 									if (_repeatChildren?.ContainsKey(ce) == true)
 										_repeatChildren[ce] = null;
