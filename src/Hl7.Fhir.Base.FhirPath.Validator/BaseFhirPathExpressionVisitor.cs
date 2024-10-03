@@ -771,7 +771,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 				}
 				catch (Exception ex)
 				{
-					// Evaluation of the expression failed - this is typically a static string, so we can evalulate it,
+					// Evaluation of the expression failed - this is typically a static string, so we can evaluate it,
 					// if not will fail, and we'll just continue and not know what type this is
 					_dynamicDefinedVariableInScope = true;
 					var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
