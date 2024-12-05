@@ -65,6 +65,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			// SDC additional functions
 			Add(new FunctionDefinition("answers", true, true) { GetReturnType = ReturnsAnswers, SupportsContext = AnswersSupportsContext }).AddValidation(ValidateNoArguments);
 			Add(new FunctionDefinition("ordinal").AddContexts(mi, "code-decimal,Coding-decimal"));
+			Add(new FunctionDefinition("weight").AddContexts(mi, "code-decimal,Coding-decimal"));
 			// sum, min, max, avg - shortcuts for aggregate -- need to check valid contexts, must be comparable, and incrementable
 			Add(new FunctionDefinition("sum", true).AddContexts(mi, "integer-integer,decimal-decimal,Quantity-Quantity")).AddValidation(ValidateNoArguments);
 			Add(new FunctionDefinition("min", true).AddContexts(mi, "integer-integer,decimal-decimal,Quantity-Quantity")).AddValidation(ValidateNoArguments);
