@@ -55,7 +55,7 @@ namespace Test.Fhir.FhirPath.Validator
             }.ToTypedElement();
             // FhirPathCompiler.DefaultSymbolTable.Add(new CallSignature("where", typeof(IEnumerable<ITypedElement>), typeof(object), typeof(bool)), runWhere);
 
-            var context = new FhirEvaluationContext(sr);
+            var context = new FhirEvaluationContext().WithResourceOverrides(sr);
             // Mock a ElementResolver only applicable to this unit test
             context.ElementResolver = (s) =>
             {

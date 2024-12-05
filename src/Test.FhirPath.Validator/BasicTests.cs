@@ -597,6 +597,28 @@ namespace Test.Fhir.FhirPath.Validator
 		}
 
 		[TestMethod]
+		public void TestPropPathsWithModifierExtension()
+		{
+			string expression = "Patient.modifierExtension.where(url='http://hl7.org/fhir/StructureDefinition/patient-interpreterRequired').first().value.ofType(boolean)";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success, "Expected success");
+			Assert.AreEqual("boolean", r.ToString());
+
+			var paths = visitor.PathsVisited.ToList();
+			Console.WriteLine(String.Join("\n", visitor.PathsVisited));
+			Assert.AreEqual(3, paths.Count);
+			Assert.IsTrue(paths.Contains("Patient.modifierExtension"));
+			Assert.IsTrue(paths.Contains("Patient.modifierExtension.value"));
+		}
+
+		[TestMethod]
 		public void TestPropPathsWithDatatypeChoice()
 		{
 			string expression = "Patient.deceased";
@@ -1250,8 +1272,29 @@ namespace Test.Fhir.FhirPath.Validator
 		}
 
 		[TestMethod]
+		public void TestPrimitiveDecimalRound()
+		{
+			string expression = "(123.45).round()";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(FhirString));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success);
+			Assert.AreEqual(0, visitor.Outcome.Errors);
+			Assert.AreEqual("decimal", r.ToString());
+		}
+
+		[TestMethod]
 		public void TestCrossResourceExpression()
 		{
+			// Test an expression on a different resource than the base part of the expression implies
+			// in this case trying an expression based on CodeSystem on a ValueSet instance type.
+			// This is common in heaps of search parameters
+			// However this is attempting to verify that there are NO possible evaluations that could work.
 			string expression = "CodeSystem.id.exists()";
 			Console.WriteLine(expression);
 			var visitor = new FhirPathExpressionVisitor();

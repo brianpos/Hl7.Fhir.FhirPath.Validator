@@ -244,7 +244,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 			base.VisitChildExpression(expression, result, rFocus, ce);
 
 			// walking into the extension property, lets kick things off with the known focus collection state
-			if (ce.ChildName == "extension")
+			if (ce.ChildName == "extension" || ce.ChildName == "modifierExtension")
 			{
 				var childAnnotation = new ExtensionAnnotation() { ParentIsCollection = rFocus.IsCollection() };
 				result.SetAnnotation(childAnnotation);
