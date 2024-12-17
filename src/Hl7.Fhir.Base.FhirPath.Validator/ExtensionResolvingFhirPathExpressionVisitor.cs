@@ -73,7 +73,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 								{
 									var singleProp = outputProps.Types.First().AsSingle();
 									outputProps.Types.Clear();
-									outputProps.Types.Add(singleProp);
+									outputProps.Types.Add(singleProp with { Path = $"{focus.Types.FirstOrDefault().Path}.extension" });
 								}
 							}
 						}
