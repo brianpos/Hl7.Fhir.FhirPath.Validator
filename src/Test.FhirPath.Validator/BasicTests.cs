@@ -619,6 +619,56 @@ namespace Test.Fhir.FhirPath.Validator
 		}
 
 		[TestMethod]
+		public void TestPropPathsWithComplexExtension()
+		{
+			// "extension('http://hl7.org/fhir/StructureDefinition/individual-genderIdentity').empty() or extension('http://hl7.org/fhir/StructureDefinition/individual-genderIdentity').all(extension('value').value"
+			string expression = "Patient.address.first().extension('http://hl7.org/fhir/StructureDefinition/geolocation').extension('latitude').value";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success, "Expected success");
+			Assert.AreEqual("decimal", r.ToString());
+
+			var paths = visitor.PathsVisited.ToList();
+			Console.WriteLine(String.Join("\n", visitor.PathsVisited));
+			Assert.AreEqual(4, paths.Count);
+			Assert.IsTrue(paths.Contains("Patient.address"));
+			Assert.IsTrue(paths.Contains("Patient.address.extension"));
+			Assert.IsTrue(paths.Contains("Patient.address.extension.extension"));
+			Assert.IsTrue(paths.Contains("Patient.address.extension.extension.value"));
+		}
+
+		[TestMethod]
+		public void TestPropPathsWithComplexExtensionViaFunction()
+		{
+			// "extension('http://hl7.org/fhir/StructureDefinition/individual-genderIdentity').empty() or extension('http://hl7.org/fhir/StructureDefinition/individual-genderIdentity').all(extension('value').value"
+			string expression = "Patient.address.first().extension('http://hl7.org/fhir/StructureDefinition/geolocation').all(extension('latitude').value.exists())";
+			Console.WriteLine(expression);
+			var visitor = new FhirPathExpressionVisitor();
+			visitor.AddInputType(typeof(Patient));
+			var pe = _compiler.Parse(expression);
+			Console.WriteLine("---------");
+			var r = pe.Accept(visitor);
+			Console.WriteLine(visitor.ToString());
+			Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+			Assert.IsTrue(visitor.Outcome.Success, "Expected success");
+			Assert.AreEqual("boolean", r.ToString());
+
+			var paths = visitor.PathsVisited.ToList();
+			Console.WriteLine(String.Join("\n", visitor.PathsVisited));
+			Assert.AreEqual(4, paths.Count);
+			Assert.IsTrue(paths.Contains("Patient.address"));
+			Assert.IsTrue(paths.Contains("Patient.address.extension"));
+			Assert.IsTrue(paths.Contains("Patient.address.extension.extension"));
+			Assert.IsTrue(paths.Contains("Patient.address.extension.extension.value"));
+		}
+
+		[TestMethod]
 		public void TestPropPathsWithDatatypeChoice()
 		{
 			string expression = "Patient.deceased";
