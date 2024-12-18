@@ -3,9 +3,11 @@
 
 ## Change log ##
 
+### December 18 2024: 5.11.1-rc4
+* Resolved issue with paths visited reported by the visitor for complex extensions
+
 ### December 18 2024: 5.11.1-rc3
 * Update FirelySDK dependency to 5.11.1
-* Resolved issue with paths visited reported by the visitor for complex extensions
 * Include net90 as a target framework
 
 ### May 6 2024: 5.8.1-rc2

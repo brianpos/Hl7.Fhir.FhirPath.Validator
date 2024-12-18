@@ -10,7 +10,16 @@ namespace Hl7.Fhir.FhirPath.Validator
 {
     public class FhirPathVisitorProps : IAnnotatable, IAnnotated
     {
-        public bool isRoot;
+        public void CopyFrom(FhirPathVisitorProps other)
+        {
+			foreach (var t in other.Types)
+				this.Types.Add(t);
+			if (other._annotations != null)
+			{
+			    annotations.AddRange(other._annotations);
+			}
+		}
+		public bool isRoot;
         public readonly Collection<NodeProps> Types = new();
 
         public void AddType(ModelInspector mi, Type type, bool forceCollection = false, string path = null)
@@ -102,12 +111,18 @@ namespace Hl7.Fhir.FhirPath.Validator
             FhirPathVisitorProps result = new();
             foreach (var t in this.Types)
             {
-                result.Types.Add(new NodeProps(t.ClassMapping, t.PropertyMapping, path: t.Path) { IsCollection = false });
+				result.Types.Add(new NodeProps(t.ClassMapping, t.PropertyMapping, path: t.Path) { IsCollection = false });
+			}
+			if (_annotations != null)
+            {
+                result.annotations.AddRange(_annotations);
             }
             return result;
         }
 
-		#region << Annotations >>
+        #region << Annotations >>
+        public bool HasAnnotations() => _annotations?.Count() > 0;
+
 		[NonSerialized]
 		private AnnotationList _annotations = null;
 

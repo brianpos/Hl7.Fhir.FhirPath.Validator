@@ -1448,8 +1448,9 @@ namespace Hl7.Fhir.FhirPath.Validator
 				r.isRoot = true;
 				if (!_stackExpressionContext.Any())
 					return RootContext;
-				foreach (var t in _stackExpressionContext.Peek().Types)
-					r.Types.Add(t);
+
+				var context = _stackExpressionContext.Peek();
+				r.CopyFrom(context);
 				return r;
 			}
 			if (expression.Name == "builtin.this")
@@ -1457,8 +1458,8 @@ namespace Hl7.Fhir.FhirPath.Validator
 				Append("$this");
 				if (!_stackExpressionContext.Any())
 					return RootContext;
-				foreach (var t in _stackExpressionContext.Peek().Types)
-					r.Types.Add(t);
+				var context = _stackExpressionContext.Peek();
+				r.CopyFrom(context);
 
 				AppendLine($" : {r.TypeNames()}");
 				return r;
@@ -1467,8 +1468,8 @@ namespace Hl7.Fhir.FhirPath.Validator
 			{
 				if (_stackAggregateTotal.Any())
 				{
-					foreach (var t in _stackAggregateTotal.Peek().Types)
-						r.Types.Add(t);
+					var context = _stackAggregateTotal.Peek();
+					r.CopyFrom(context);
 				}
 				Append("$total");
 				AppendLine($" : {r.TypeNames()}");
