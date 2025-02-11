@@ -3,7 +3,11 @@
 
 ## Change log ##
 
+### February 11 2025
+* Update FirelySDK dependency to 5.11.3
+
 ### December 18 2024: 5.11.1-rc4
+* Tracks all the properties that an expression uses. (each time it calls the child property, add it to the list)
 * Resolved issue with paths visited reported by the visitor for complex extensions
 
 ### December 18 2024: 5.11.1-rc3
