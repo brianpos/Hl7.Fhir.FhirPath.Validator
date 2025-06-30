@@ -209,6 +209,7 @@ namespace Test.Fhir.FhirPath.Validator
 				}
 				Console.WriteLine("---------");
 			}
+
 			try
 			{
 				var ce = _compiler.Compile(testData.expression);
@@ -220,15 +221,7 @@ namespace Test.Fhir.FhirPath.Validator
 					Console.WriteLine("Returned results:");
 					foreach (var item in results)
 					{
-						Console.WriteLine($"	{item.Value} ({item.InstanceType})");
-						//if (testData.outputs != null && testData.outputs.Count > 0)
-						//{
-						//	var expectedType = testData.outputs.FirstOrDefault()?.Type;
-						//	if (!string.IsNullOrEmpty(expectedType))
-						//	{
-						//		Assert.AreEqual(expectedType, item.TypeName, $"Expected result of type {expectedType}, got {item.TypeName}");
-						//	}
-						//}
+						Console.WriteLine($"	{item.Value} ({NormalizeTypeName(item.InstanceType)})");
 					}
 					Console.WriteLine("---------");
 				}
@@ -237,38 +230,35 @@ namespace Test.Fhir.FhirPath.Validator
 				if (testData.outputs != null && testData.outputs.Count > 0)
 				{
 					Assert.AreEqual(testData.outputs.Count, results.Count(), $"Expected {testData.outputs.Count} results, got {results.Count()}");
-					//foreach (var output in testData.outputs)
-					//{
-					//	var result = results.FirstOrDefault(r => r.TypeName == output.Type);
-					//	Assert.IsNotNull(result, $"Expected result of type {output.Type} not found.");
-					//}
+
+					// verify the values too
+					int missMatchingResults = 0;
+					for (int n=0; n< testData.outputs.Count; n++)
+					{
+						var expectedItem = testData.outputs[n];
+						var actualItem = results.ElementAt(n);
+						// Check type
+						if (expectedItem.Type != NormalizeTypeName(actualItem.InstanceType))
+						{
+							missMatchingResults++;
+							Console.WriteLine($"Mismatch at index {n}: expected type {expectedItem.Type}, got {actualItem.InstanceType}");
+						}
+						else
+						{
+							// Check the data too
+							if (!DataEquals(expectedItem, actualItem))
+							{
+								missMatchingResults++;
+								Console.WriteLine($"Mismatch at index {n}: expected value '{expectedItem.Text}', got '{actualItem.Value}'");
+							}
+						}
+					}
+					Assert.AreEqual(0, missMatchingResults, "Some results didn't match expected values");
 				}
 				else
 				{
 					Assert.IsFalse(results.Any(), "Expected no results, but got some.");
 				}
-
-				//Console.WriteLine(visitor.ToString());
-				//Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
-				//if (testData.expressionValid == "semantic" || testData.expressionValid == "execution")
-				//{
-				//	if (visitor.Outcome.Success)
-				//	{
-				//		Assert.IsFalse(r.Types.Any());
-				//	}
-				//	// Assert.IsFalse(visitor.Outcome.Success);
-				//}
-				//else
-				//	Assert.IsTrue(visitor.Outcome.Success, $"expected: {testData.expressionValid}");
-
-				//if (string.IsNullOrEmpty(testData.expressionValid) && string.IsNullOrEmpty(testData.outputType) && !string.IsNullOrEmpty(r.ToString()))
-				//{
-				//	if (!testData.emptyOutput)
-				//	{
-				//		Assert.Inconclusive($"Test did not have an output type defined, result returned {r}");
-				//		Assert.AreEqual(testData.outputType, r.ToString());
-				//	}
-				//}
 			}
 			catch (InvalidOperationException ex)
 			{
@@ -289,6 +279,30 @@ namespace Test.Fhir.FhirPath.Validator
 					Assert.Fail(ex.Message);
 				}
 			}
+		}
+
+		private string NormalizeTypeName(string typeName)
+		{
+			if (!typeName.Contains(".") && !typeName.EndsWith("."))
+				return typeName;
+			if (typeName == "System.Quantity")
+				return "Quantity";
+			return typeName.Substring(typeName.LastIndexOf('.') + 1, 1).ToLower() + typeName.Substring(typeName.LastIndexOf('.') + 2);
+		}
+
+		private bool DataEquals(Output expectedItem, ITypedElement actualItem)
+		{
+			if (expectedItem.Type == "boolean")
+				return expectedItem.Text.ToLower() == actualItem.Value?.ToString().ToLower();
+			if (expectedItem.Type == "date")
+				return expectedItem.Text.ToLower().Substring(1) == actualItem.Value?.ToString().ToLower();
+			if (expectedItem.Type == "dateTime")
+			{
+				var expectedDateTime = Hl7.Fhir.ElementModel.Types.DateTime.Parse(expectedItem.Text.Substring(1));
+				var actualDateTime = Hl7.Fhir.ElementModel.Types.DateTime.Parse(actualItem.Value?.ToString());
+				return expectedDateTime.Equals(actualDateTime);
+			}
+			return expectedItem.Text == actualItem.Value?.ToString();
 		}
 	}
 }
