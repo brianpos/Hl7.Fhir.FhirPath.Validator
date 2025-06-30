@@ -1,17 +1,20 @@
+﻿using Hl7.Fhir.ElementModel;
+using Hl7.Fhir.FhirPath;
 ﻿using Hl7.Fhir.FhirPath.Validator;
-using Hl7.FhirPath.Expressions;
-using Hl7.FhirPath;
-using Hl7.Fhir.Serialization;
 using Hl7.Fhir.Model;
-using System;
+using Hl7.Fhir.Rest;
+using Hl7.Fhir.Serialization;
+using Hl7.FhirPath;
+using Hl7.FhirPath.Expressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using System.Xml.Serialization;
 using Test.Fhir.R4B.FhirPath.Validator;
-using System.Collections.Generic;
-using System.Linq;
-using Hl7.Fhir.ElementModel;
-using Hl7.Fhir.FhirPath;
+using Test.Fhir.R5.FhirPath.Validator;
 
 namespace Test.Fhir.FhirPath.Validator
 {
@@ -233,7 +236,7 @@ namespace Test.Fhir.FhirPath.Validator
 
 					// verify the values too
 					int missMatchingResults = 0;
-					for (int n=0; n< testData.outputs.Count; n++)
+					for (int n = 0; n < testData.outputs.Count; n++)
 					{
 						var expectedItem = testData.outputs[n];
 						var actualItem = results.ElementAt(n);
@@ -268,7 +271,7 @@ namespace Test.Fhir.FhirPath.Validator
 			{
 				Assert.IsTrue(testData.expressionValid == "syntax" || testData.expressionValid == "execution", $"unexpected compilation error: {ex.Message}");
 			}
-			catch(ArgumentException ex)
+			catch (ArgumentException ex)
 			{
 				if (ex.Message.StartsWith("Unknown symbol '"))
 				{
@@ -304,5 +307,170 @@ namespace Test.Fhir.FhirPath.Validator
 			}
 			return expectedItem.Text == actualItem.Value?.ToString();
 		}
+
+		public void RecordResult(string engineName, string groupName, string testName, bool testPass, string failureMessage = null)
+		{
+			// Serialize the results 
+			string fileName = Path.Combine(@"C:\git\Production\fhirpath-lab\static\results", $"{engineName.Replace("(", "").Replace(")", "")}.json");
+			TestCaseResultOutputFile results = new TestCaseResultOutputFile();
+			results.EngineName = engineName;
+			if (File.Exists(fileName))
+			{
+				var jsonContent = File.ReadAllText(fileName);
+				results = System.Text.Json.JsonSerializer.Deserialize<TestCaseResultOutputFile>(jsonContent);
+			}
+
+			var group = results.Groups.FirstOrDefault(g => g.Name == groupName);
+			if (group == null)
+			{
+				group = new GroupOutput() { Name = groupName };
+				results.Groups.Add(group);
+			}
+			var testCase = group.TestCases.FirstOrDefault(t => t.Name == testName);
+			if (testCase == null)
+			{
+				testCase = new TestCaseOutput() { Name = testName };
+				group.TestCases.Add(testCase);
+			}
+			testCase.Result = testPass;
+			testCase.FailureMessage = failureMessage;
+
+			// write the json test file out
+			var json = System.Text.Json.JsonSerializer.Serialize(results,
+				new JsonSerializerOptions()
+				{
+					WriteIndented = true,
+					DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+				});
+			File.WriteAllText(fileName, json);
+		}
+
+		[TestMethod]
+		[DynamicData(nameof(TestDataKeys))]
+		public void TestEvaluateOnServer(string groupName, string testName)
+		{
+			var testData = _testData[$"{groupName}.{testName}"];
+
+			// string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
+			Console.WriteLine($"{groupName} - {testName}");
+			Console.WriteLine($"Resource Type: {testData.resourceType}");
+			Console.WriteLine($"Expression:\r\n{testData.expression}");
+			Console.WriteLine("---------");
+			if (testData.outputs.Any())
+			{
+				Console.WriteLine("Expecting results:");
+				foreach (var o in testData.outputs)
+				{
+					Console.WriteLine($"	{o.Text} ({o.Type})");
+				}
+				Console.WriteLine("---------");
+			}
+
+			// Call the FhirPath Lab compatible server call
+
+			var engineName = "Unknown";
+			var serverUrl = "http://localhost:7071/api";
+			// var serverUrl = "https://fhirpath-lab-dotnet2.azurewebsites.net/api";
+			// var serverUrl = "https://fhirpath-lab-java-g5c4bfdrb8ejamar.australiaeast-01.azurewebsites.net/fhir5";
+			FhirClient server = new FhirClient(serverUrl,
+				new FhirClientSettings() { VerifyFhirVersion = false, PreferredFormat = ResourceFormat.Json });
+
+			var parameters = new Parameters();
+			parameters.Parameter.Add(new Parameters.ParameterComponent()
+			{
+				Name = "expression",
+				Value = new FhirString(testData.expression)
+			});
+			parameters.Parameter.Add(new Parameters.ParameterComponent()
+			{
+				Name = "resource",
+				Resource = testData.resource
+			});
+			List<ITypedElement> results = new List<ITypedElement>();
+			try
+			{
+				var result = server.WholeSystemOperation("fhirpath-r5", parameters);
+
+				if (result is Parameters resultParams)
+				{
+					var partParams = resultParams.Parameter.FirstOrDefault(p => p.Name == "parameters");
+					var partEngine = partParams?.Part.FirstOrDefault(p => p.Name == "evaluator")?.Value?.ToString();
+					if (!string.IsNullOrEmpty(partEngine))
+					{
+						engineName = partEngine;
+					}
+					var partResults = resultParams.Parameter.Where(p => p.Name == "result").ToList();
+
+					foreach (var pr in partResults)
+					{
+						Console.WriteLine($"Result: {pr.Value}");
+						foreach (var part in pr.Part)
+						{
+							Console.WriteLine($" Part Value: {part.Value} ({part.Name}) ({NormalizeTypeName(part.Value.TypeName)})");
+							results.Add(part.Value.ToTypedElement());
+						}
+					}
+				}
+
+				// Console.WriteLine("Returned results:" + result.ToJson(new FhirJsonSerializationSettings() { Pretty = true }));
+
+				if (results.Any())
+				{
+					Console.WriteLine("Returned results:");
+					foreach (var item in results)
+					{
+						Console.WriteLine($"	{item.Value} ({NormalizeTypeName(item.InstanceType)})");
+					}
+					Console.WriteLine("---------");
+				}
+
+				// Check the count of results is the same as the expected output
+				if (testData.outputs != null && testData.outputs.Count > 0)
+				{
+					if (testData.outputs.Count != results.Count())
+						RecordResult(engineName, groupName, testName, false, $"Expected {testData.outputs.Count} results, got {results.Count()}");
+					Assert.AreEqual(testData.outputs.Count, results.Count(), $"Expected {testData.outputs.Count} results, got {results.Count()}");
+
+					// verify the values too
+					int missMatchingResults = 0;
+					for (int n = 0; n < testData.outputs.Count; n++)
+					{
+						var expectedItem = testData.outputs[n];
+						var actualItem = results.ElementAt(n);
+						// Check type
+						if (expectedItem.Type != NormalizeTypeName(actualItem.InstanceType))
+						{
+							missMatchingResults++;
+							Console.WriteLine($"Mismatch at index {n}: expected type {expectedItem.Type}, got {actualItem.InstanceType}");
+						}
+						else
+						{
+							// Check the data too
+							if (!DataEquals(expectedItem, actualItem))
+							{
+								missMatchingResults++;
+								Console.WriteLine($"Mismatch at index {n}: expected value '{expectedItem.Text}', got '{actualItem.Value}'");
+							}
+						}
+					}
+					if (missMatchingResults != 0)
+						RecordResult(engineName, groupName, testName, false, $"Some results didnt match expected values ({missMatchingResults} values)");
+					else
+						RecordResult(engineName, groupName, testName, true);
+					Assert.AreEqual(0, missMatchingResults, "Some results didn't match expected values");
+				}
+				else
+				{
+					RecordResult(engineName, groupName, testName, false, "Expected no results, but got some.");
+					Assert.IsFalse(results.Any(), "Expected no results, but got some.");
+				}
+			}
+			catch (FhirOperationException ex)
+			{
+				RecordResult(engineName, groupName, testName, false, ex.Message);
+				Assert.Fail(ex.Message);
+			}
+		}
+
 	}
 }
