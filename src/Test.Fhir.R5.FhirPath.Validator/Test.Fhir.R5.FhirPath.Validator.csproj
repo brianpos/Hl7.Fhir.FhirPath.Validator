@@ -14,6 +14,9 @@
     <Compile Remove="CustomSerializers.cs" />
     <Compile Remove="CustomSerializersAllExamples.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Test.FhirPath.Validator\TestFileDefinition.cs" Link="TestFileDefinition.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Hl7.Fhir.Specification.Data.R5" Version="5.11.4" />

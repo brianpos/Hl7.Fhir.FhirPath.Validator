@@ -10,13 +10,8 @@ using System.Xml.Serialization;
 using Test.Fhir.R4B.FhirPath.Validator;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Hl7.Fhir.Rest;
-using System.Threading;
-using System.Threading.Tasks;
-using Task = System.Threading.Tasks.Task;
-using System.Linq.Expressions;
-using System.CodeDom.Compiler;
+using Hl7.Fhir.ElementModel;
+using Hl7.Fhir.FhirPath;
 
 namespace Test.Fhir.FhirPath.Validator
 {
@@ -50,6 +45,7 @@ namespace Test.Fhir.FhirPath.Validator
 			public string outputType;
 			public bool emptyOutput;
 			public Resource resource;
+			public List<Output> outputs;
 		}
 
 		public static IEnumerable<object[]> TestDataKeys
@@ -135,6 +131,7 @@ namespace Test.Fhir.FhirPath.Validator
 								expressionValid = t.Expression.Invalid,
 								emptyOutput = t.Outputs?.Count == 0,
 								outputType = t.Outputs?.FirstOrDefault()?.Type,
+								outputs = t.Outputs,
 								resource = r
 							});
 						}
@@ -143,7 +140,6 @@ namespace Test.Fhir.FhirPath.Validator
 				return result;
 			}
 		}
-
 
 		[TestMethod]
 		[DynamicData(nameof(TestDataKeys))]
@@ -190,6 +186,108 @@ namespace Test.Fhir.FhirPath.Validator
 			catch (FormatException ex)
 			{
 				Assert.IsTrue(testData.expressionValid == "syntax", $"unexpected compilation error: {ex.Message}");
+			}
+		}
+
+		[TestMethod]
+		[DynamicData(nameof(TestDataKeys))]
+		public void TestEvaluateExpression(string groupName, string testName)
+		{
+			var testData = _testData[$"{groupName}.{testName}"];
+
+			// string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
+			Console.WriteLine($"{groupName} - {testName}");
+			Console.WriteLine($"Resource Type: {testData.resourceType}");
+			Console.WriteLine($"Expression:\r\n{testData.expression}");
+			Console.WriteLine("---------");
+			if (testData.outputs.Any())
+			{
+				Console.WriteLine("Expecting results:");
+				foreach (var o in testData.outputs)
+				{
+					Console.WriteLine($"	{o.Text} ({o.Type})");
+				}
+				Console.WriteLine("---------");
+			}
+			try
+			{
+				var ce = _compiler.Compile(testData.expression);
+				var r = testData.resource.ToTypedElement().ToScopedNode();
+				IEnumerable<ITypedElement> results = ce(r, new FhirEvaluationContext());
+
+				if (results.Any())
+				{
+					Console.WriteLine("Returned results:");
+					foreach (var item in results)
+					{
+						Console.WriteLine($"	{item.Value} ({item.InstanceType})");
+						//if (testData.outputs != null && testData.outputs.Count > 0)
+						//{
+						//	var expectedType = testData.outputs.FirstOrDefault()?.Type;
+						//	if (!string.IsNullOrEmpty(expectedType))
+						//	{
+						//		Assert.AreEqual(expectedType, item.TypeName, $"Expected result of type {expectedType}, got {item.TypeName}");
+						//	}
+						//}
+					}
+					Console.WriteLine("---------");
+				}
+
+				// Check the count of results is the same as the expected output
+				if (testData.outputs != null && testData.outputs.Count > 0)
+				{
+					Assert.AreEqual(testData.outputs.Count, results.Count(), $"Expected {testData.outputs.Count} results, got {results.Count()}");
+					//foreach (var output in testData.outputs)
+					//{
+					//	var result = results.FirstOrDefault(r => r.TypeName == output.Type);
+					//	Assert.IsNotNull(result, $"Expected result of type {output.Type} not found.");
+					//}
+				}
+				else
+				{
+					Assert.IsFalse(results.Any(), "Expected no results, but got some.");
+				}
+
+				//Console.WriteLine(visitor.ToString());
+				//Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+				//if (testData.expressionValid == "semantic" || testData.expressionValid == "execution")
+				//{
+				//	if (visitor.Outcome.Success)
+				//	{
+				//		Assert.IsFalse(r.Types.Any());
+				//	}
+				//	// Assert.IsFalse(visitor.Outcome.Success);
+				//}
+				//else
+				//	Assert.IsTrue(visitor.Outcome.Success, $"expected: {testData.expressionValid}");
+
+				//if (string.IsNullOrEmpty(testData.expressionValid) && string.IsNullOrEmpty(testData.outputType) && !string.IsNullOrEmpty(r.ToString()))
+				//{
+				//	if (!testData.emptyOutput)
+				//	{
+				//		Assert.Inconclusive($"Test did not have an output type defined, result returned {r}");
+				//		Assert.AreEqual(testData.outputType, r.ToString());
+				//	}
+				//}
+			}
+			catch (InvalidOperationException ex)
+			{
+				Assert.IsTrue(testData.expressionValid == "semantic" || testData.expressionValid == "execution", $"unexpected compilation error: {ex.Message}");
+			}
+			catch (FormatException ex)
+			{
+				Assert.IsTrue(testData.expressionValid == "syntax" || testData.expressionValid == "execution", $"unexpected compilation error: {ex.Message}");
+			}
+			catch(ArgumentException ex)
+			{
+				if (ex.Message.StartsWith("Unknown symbol '"))
+				{
+					Assert.Inconclusive(ex.Message);
+				}
+				else
+				{
+					Assert.Fail(ex.Message);
+				}
 			}
 		}
 	}
