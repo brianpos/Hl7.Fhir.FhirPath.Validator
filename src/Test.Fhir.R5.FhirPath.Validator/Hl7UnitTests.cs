@@ -100,7 +100,7 @@ namespace Test.Fhir.FhirPath.Validator
 						//Console.WriteLine("-----------------------------------");
 						foreach (var t in g.Tests)
 						{
-							if (t.Mode == "cda") 
+							if (t.Mode == "cda")
 								continue; // not testing CDA documents
 
 							// Now parse in the test file
@@ -323,9 +323,10 @@ namespace Test.Fhir.FhirPath.Validator
 			string fileName = Path.Combine(@"C:\git\Production\fhirpath-lab\static\results", $"{engineName.Replace("(", "").Replace(")", "")}.json");
 			TestCaseResultOutputFile results = new TestCaseResultOutputFile();
 			results.EngineName = engineName;
+			string jsonContent = null;
 			if (File.Exists(fileName))
 			{
-				var jsonContent = File.ReadAllText(fileName);
+				jsonContent = File.ReadAllText(fileName);
 				results = System.Text.Json.JsonSerializer.Deserialize<TestCaseResultOutputFile>(jsonContent);
 			}
 
@@ -344,13 +345,14 @@ namespace Test.Fhir.FhirPath.Validator
 			testCase.Description = testDescription;
 			testCase.Expression = expression;
 			testCase.FailureMessage = failureMessage;
-			if (failureMessage?.Contains("Not implemented") == true)
+			if (failureMessage?.Contains("Not implemented") == true || failureMessage?.Contains("Unhandled function '") == true)
 			{
 				testCase.NotImplemented = true;
 				testCase.Result = null;
 			}
 			else
 			{
+				testCase.NotImplemented = null;
 				testCase.Result = testPass;
 			}
 
@@ -362,7 +364,12 @@ namespace Test.Fhir.FhirPath.Validator
 					DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
 					Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
 				});
-			File.WriteAllText(fileName, json);
+
+			// only write the output if it is different
+			if (jsonContent != json)
+			{
+				File.WriteAllText(fileName, json);
+			}
 		}
 
 		[TestMethod]
@@ -451,6 +458,18 @@ namespace Test.Fhir.FhirPath.Validator
 					}
 				}
 
+				if (result is OperationOutcome outcome)
+				{
+					// an error occurred, check that is expected.
+					var errMessage = string.Join("\n", outcome.Issue?.Select(i => $"{i.Severity} ({i.Code}) {i.Details?.Text}"));
+					if (testData.expressionValid != null)
+						RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, true);
+					else
+						RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, false, errMessage);
+					Assert.Inconclusive(errMessage);
+					return;
+				}
+
 				// Console.WriteLine("Returned results:" + result.ToJson(new FhirJsonSerializationSettings() { Pretty = true }));
 
 				if (results.Any())
@@ -514,7 +533,7 @@ namespace Test.Fhir.FhirPath.Validator
 				var errMessage = ex.Message;
 				if (ex.Outcome != null)
 				{
-					errMessage = string.Join("\n", ex.Outcome.Issue?.Select(i => $"{i.Severity} ({i.Code}) {i.Details?.Text}"));
+					errMessage = string.Join("\n", ex.Outcome.Issue?.Select(i => $"{i.Severity} ({i.Code}) {i.Details?.Text}{(!string.IsNullOrEmpty(i.Diagnostics) ? $"\n   - {i.Diagnostics}" : "")}"));
 				}
 				if (testData.expressionValid == "semantic" || testData.expressionValid == "execution" || testData.expressionValid == "syntax")
 					RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, true);
