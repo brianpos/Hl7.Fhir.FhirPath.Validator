@@ -21,8 +21,11 @@ namespace Test.Fhir.R5.FhirPath.Validator
 	public class TestCaseOutput
 	{
 		public string Name { get; set; }
+		public string Description { get; set; }
+		public string Expression { get; set; }
 
-		public bool Result { get; set; }
+		public bool? Result { get; set; }
+		public bool? NotImplemented { get; set; }
 		public string FailureMessage { get; set; }
 	}
 }

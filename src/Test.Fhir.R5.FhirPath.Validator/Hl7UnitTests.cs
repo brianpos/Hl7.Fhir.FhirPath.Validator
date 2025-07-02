@@ -1,9 +1,10 @@
 ﻿using Hl7.Fhir.ElementModel;
 using Hl7.Fhir.FhirPath;
-﻿using Hl7.Fhir.FhirPath.Validator;
+using Hl7.Fhir.FhirPath.Validator;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using Hl7.Fhir.Serialization;
+using Hl7.Fhir.Utility;
 using Hl7.FhirPath;
 using Hl7.FhirPath.Expressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -42,6 +43,7 @@ namespace Test.Fhir.FhirPath.Validator
 		{
 			public string groupName;
 			public string testName;
+			public string testDescription;
 			public string resourceType;
 			public string expression;
 			public string expressionValid;
@@ -129,6 +131,7 @@ namespace Test.Fhir.FhirPath.Validator
 							{
 								groupName = g.Name,
 								testName = t.Name,
+								testDescription = t.Description,
 								resourceType = r.TypeName,
 								expression = t.Expression.Text,
 								expressionValid = t.Expression.Invalid,
@@ -305,10 +308,16 @@ namespace Test.Fhir.FhirPath.Validator
 				var actualDateTime = Hl7.Fhir.ElementModel.Types.DateTime.Parse(actualItem.Value?.ToString());
 				return expectedDateTime.Equals(actualDateTime);
 			}
+			if (expectedItem.Type == "Quantity")
+			{
+				var expectedQ = Hl7.Fhir.ElementModel.Types.Quantity.Parse(expectedItem.Text);
+				var actualQ = actualItem.ParseQuantity().ToQuantity();
+				return expectedQ.CompareTo(actualQ) == 0;
+			}
 			return expectedItem.Text == actualItem.Value?.ToString();
 		}
 
-		public void RecordResult(string engineName, string groupName, string testName, bool testPass, string failureMessage = null)
+		public void RecordResult(string engineName, string groupName, string testName, string testDescription, string expression, bool testPass, string failureMessage = null)
 		{
 			// Serialize the results 
 			string fileName = Path.Combine(@"C:\git\Production\fhirpath-lab\static\results", $"{engineName.Replace("(", "").Replace(")", "")}.json");
@@ -329,11 +338,21 @@ namespace Test.Fhir.FhirPath.Validator
 			var testCase = group.TestCases.FirstOrDefault(t => t.Name == testName);
 			if (testCase == null)
 			{
-				testCase = new TestCaseOutput() { Name = testName };
+				testCase = new TestCaseOutput() { Name = testName, Description = testDescription, Expression = expression };
 				group.TestCases.Add(testCase);
 			}
-			testCase.Result = testPass;
+			testCase.Description = testDescription;
+			testCase.Expression = expression;
 			testCase.FailureMessage = failureMessage;
+			if (failureMessage?.Contains("Not implemented") == true)
+			{
+				testCase.NotImplemented = true;
+				testCase.Result = null;
+			}
+			else
+			{
+				testCase.Result = testPass;
+			}
 
 			// write the json test file out
 			var json = System.Text.Json.JsonSerializer.Serialize(results,
@@ -341,6 +360,7 @@ namespace Test.Fhir.FhirPath.Validator
 				{
 					WriteIndented = true,
 					DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+					Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
 				});
 			File.WriteAllText(fileName, json);
 		}
@@ -373,13 +393,32 @@ namespace Test.Fhir.FhirPath.Validator
 			// var serverUrl = "https://fhirpath-lab-dotnet2.azurewebsites.net/api";
 			// var serverUrl = "https://fhirpath-lab-java-g5c4bfdrb8ejamar.australiaeast-01.azurewebsites.net/fhir5";
 			FhirClient server = new FhirClient(serverUrl,
-				new FhirClientSettings() { VerifyFhirVersion = false, PreferredFormat = ResourceFormat.Json });
+				new FhirClientSettings()
+				{
+					VerifyFhirVersion = false,
+					PreferredFormat = ResourceFormat.Json,
+					ParserSettings = new ParserSettings()
+					{
+						AcceptUnknownMembers = true,
+						PermissiveParsing = true,
+						ExceptionHandler = (object source, ExceptionNotification args) => { Console.WriteLine($"Error: {args.Message}"); }
+					}
+				});
 
 			var parameters = new Parameters();
 			parameters.Parameter.Add(new Parameters.ParameterComponent()
 			{
 				Name = "expression",
 				Value = new FhirString(testData.expression)
+			});
+			parameters.Parameter.Add(new Parameters.ParameterComponent()
+			{
+				Name = "validate",
+				Value = new FhirBoolean(true)
+			});
+			parameters.Parameter.Add(new Parameters.ParameterComponent()
+			{
+				Name = "variables"
 			});
 			parameters.Parameter.Add(new Parameters.ParameterComponent()
 			{
@@ -428,7 +467,7 @@ namespace Test.Fhir.FhirPath.Validator
 				if (testData.outputs != null && testData.outputs.Count > 0)
 				{
 					if (testData.outputs.Count != results.Count())
-						RecordResult(engineName, groupName, testName, false, $"Expected {testData.outputs.Count} results, got {results.Count()}");
+						RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, false, $"Expected {testData.outputs.Count} results, got {results.Count()}");
 					Assert.AreEqual(testData.outputs.Count, results.Count(), $"Expected {testData.outputs.Count} results, got {results.Count()}");
 
 					// verify the values too
@@ -438,12 +477,9 @@ namespace Test.Fhir.FhirPath.Validator
 						var expectedItem = testData.outputs[n];
 						var actualItem = results.ElementAt(n);
 						// Check type
-						if (expectedItem.Type != NormalizeTypeName(actualItem.InstanceType))
-						{
-							missMatchingResults++;
-							Console.WriteLine($"Mismatch at index {n}: expected type {expectedItem.Type}, got {actualItem.InstanceType}");
-						}
-						else
+						if (expectedItem.Type == NormalizeTypeName(actualItem.InstanceType)
+							// JS engine can;t differentiate between a decimal that is an integer
+							|| (expectedItem.Type == "decimal" && actualItem.InstanceType == "integer"))
 						{
 							// Check the data too
 							if (!DataEquals(expectedItem, actualItem))
@@ -452,22 +488,43 @@ namespace Test.Fhir.FhirPath.Validator
 								Console.WriteLine($"Mismatch at index {n}: expected value '{expectedItem.Text}', got '{actualItem.Value}'");
 							}
 						}
+						else
+						{
+							missMatchingResults++;
+							Console.WriteLine($"Mismatch at index {n}: expected type {expectedItem.Type}, got {actualItem.InstanceType}");
+						}
 					}
 					if (missMatchingResults != 0)
-						RecordResult(engineName, groupName, testName, false, $"Some results didnt match expected values ({missMatchingResults} values)");
+						RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, false, $"Some results didn't match expected values ({missMatchingResults} values)");
 					else
-						RecordResult(engineName, groupName, testName, true);
+						RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, true);
 					Assert.AreEqual(0, missMatchingResults, "Some results didn't match expected values");
 				}
 				else
 				{
-					RecordResult(engineName, groupName, testName, false, "Expected no results, but got some.");
+					if (results.Any())
+						RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, false, "Expected no results, but got some.");
+					else
+						RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, true);
 					Assert.IsFalse(results.Any(), "Expected no results, but got some.");
 				}
 			}
 			catch (FhirOperationException ex)
 			{
-				RecordResult(engineName, groupName, testName, false, ex.Message);
+				var errMessage = ex.Message;
+				if (ex.Outcome != null)
+				{
+					errMessage = string.Join("\n", ex.Outcome.Issue?.Select(i => $"{i.Severity} ({i.Code}) {i.Details?.Text}"));
+				}
+				if (testData.expressionValid == "semantic" || testData.expressionValid == "execution" || testData.expressionValid == "syntax")
+					RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, true);
+				else
+					RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, false, errMessage);
+				Assert.IsTrue(testData.expressionValid == "semantic" || testData.expressionValid == "execution", errMessage);
+			}
+			catch (InvalidCastException ex)
+			{
+				RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, false, ex.Message);
 				Assert.Fail(ex.Message);
 			}
 		}
