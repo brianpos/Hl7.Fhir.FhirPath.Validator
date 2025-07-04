@@ -46,6 +46,7 @@ namespace Test.Fhir.FhirPath.Validator
 			public string testDescription;
 			public string resourceType;
 			public string expression;
+			public bool? isPredicate;
 			public string expressionValid;
 			public string outputType;
 			public bool emptyOutput;
@@ -134,6 +135,7 @@ namespace Test.Fhir.FhirPath.Validator
 								testDescription = t.Description,
 								resourceType = r.TypeName,
 								expression = t.Expression.Text,
+								isPredicate = t.Predicate,
 								expressionValid = t.Expression.Invalid,
 								emptyOutput = t.Outputs?.Count == 0,
 								outputType = t.Outputs?.FirstOrDefault()?.Type,
@@ -372,10 +374,84 @@ namespace Test.Fhir.FhirPath.Validator
 			}
 		}
 
-		[TestMethod]
-		[DynamicData(nameof(TestDataKeys))]
-		public void TestEvaluateOnServer(string groupName, string testName)
+		class CustomSerializer : IFhirSerializationEngine
 		{
+			public Resource DeserializeFromJson(string data)
+			{
+				try
+				{
+					var s = new FhirJsonPocoDeserializer();
+					return s.DeserializeResource(data);
+				}
+				catch (DeserializationFailedException ex)
+				{
+					Console.WriteLine($"Error deserializing JSON: {ex.Message}, proceeding with partial if available");
+					if (ex.PartialResult != null)
+						return ex.PartialResult as Resource;
+
+					Console.WriteLine($"Error deserializing JSON: {ex.Message}");
+					throw new NotImplementedException("Deserialization from JSON is not implemented in this test.");
+				}
+			}
+
+			public Resource DeserializeFromXml(string data)
+			{
+				throw new NotImplementedException();
+			}
+
+			public string SerializeToJson(Resource instance)
+			{
+				return instance.ToJson();
+			}
+
+			public string SerializeToXml(Resource instance)
+			{
+				return instance.ToXml();
+			}
+		}
+
+		public record ServerDetails
+		{
+			public ServerDetails(string engineName, string serverUrl, string opName)
+			{
+				EngineName = engineName;
+				ServerUrl = serverUrl;
+				OperationName = opName;
+			}
+			public string EngineName { get; init; }
+			public string ServerUrl { get; init; }
+			public string OperationName { get; init; }
+		}
+
+		public static IEnumerable<ServerDetails> servers = new List<ServerDetails>
+		{
+			new ServerDetails("Firely-5.11.4 (R5)", "https://fhirpath-lab-dotnet2.azurewebsites.net/api", "fhirpath-r5"),
+			new ServerDetails("fhirpath.js-4.4.0 (r5)", "http://localhost:3000/api", "fhirpath-r5"),
+			new ServerDetails("Java 6.5.27 (R5)", "https://fhirpath-lab-java-g5c4bfdrb8ejamar.australiaeast-01.azurewebsites.net/fhir5", "fhirpath-r5"),
+			new ServerDetails("fhirpath-py 1.0.3", "https://fhirpath.emr.beda.software/fhir", "fhirpath"),
+			new ServerDetails("Aidbox (R5)", "https://fhir-validator.aidbox.app/r5", ""),
+		};
+
+		public static IEnumerable<object[]> TestDataKeysForServers
+		{
+			get
+			{
+				var allTestData = TestDataKeys.ToList();
+				foreach (var sd in servers)
+				{
+					foreach (var testData in allTestData)
+					{
+						yield return new object[] { sd.EngineName, testData[0], testData[1] };
+					}
+				}
+			}
+		}
+
+		[TestMethod]
+		[DynamicData(nameof(TestDataKeysForServers))]
+		public void TestEvaluateOnServer(string engineName, string groupName, string testName)
+		{
+			var serverDetails = servers.FirstOrDefault(s => s.EngineName == engineName);
 			var testData = _testData[$"{groupName}.{testName}"];
 
 			// string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
@@ -395,20 +471,35 @@ namespace Test.Fhir.FhirPath.Validator
 
 			// Call the FhirPath Lab compatible server call
 
-			var engineName = "Unknown";
-			var serverUrl = "http://localhost:7071/api";
-			// var serverUrl = "https://fhirpath-lab-dotnet2.azurewebsites.net/api";
-			// var serverUrl = "https://fhirpath-lab-java-g5c4bfdrb8ejamar.australiaeast-01.azurewebsites.net/fhir5";
-			FhirClient server = new FhirClient(serverUrl,
+			// var engineName = "fhirpath.js-4.4.0 (r5)";
+			// var serverUrl = "http://localhost:3000/api"; // Fhirpath.js engine
+
+			// var engineName = "Firely-5.11.4 (R5)";
+			// var serverUrl = "https://fhirpath-lab-dotnet2.azurewebsites.net/api"; // Firely engine
+
+			// var engineName = "Java 6.5.27 (R5)";
+			// var serverUrl = "https://fhirpath-lab-java-g5c4bfdrb8ejamar.australiaeast-01.azurewebsites.net/fhir5"; // HAPI engine
+			// var serverUrl = "http://localhost:7071/api";
+
+			// var serverUrl = "https://fhir-validator.aidbox.app/r5"; // Aidbox engine
+
+			// var engineName = "fhirpath-py 1.0.3";
+			// var serverUrl = "https://fhirpath.emr.beda.software/fhir"; // Python engine
+
+			FhirClient server = new FhirClient(serverDetails.ServerUrl,
 				new FhirClientSettings()
 				{
+					SerializationEngine = new CustomSerializer(),
 					VerifyFhirVersion = false,
 					PreferredFormat = ResourceFormat.Json,
 					ParserSettings = new ParserSettings()
 					{
 						AcceptUnknownMembers = true,
 						PermissiveParsing = true,
-						ExceptionHandler = (object source, ExceptionNotification args) => { Console.WriteLine($"Error: {args.Message}"); }
+						ExceptionHandler = (object source, ExceptionNotification args) =>
+						{
+							Console.WriteLine($"Error: {args.Message}");
+						}
 					}
 				});
 
@@ -435,7 +526,7 @@ namespace Test.Fhir.FhirPath.Validator
 			List<ITypedElement> results = new List<ITypedElement>();
 			try
 			{
-				var result = server.WholeSystemOperation("fhirpath-r5", parameters);
+				var result = server.WholeSystemOperation(serverDetails.OperationName, parameters);
 
 				if (result is Parameters resultParams)
 				{
@@ -452,8 +543,20 @@ namespace Test.Fhir.FhirPath.Validator
 						Console.WriteLine($"Result: {pr.Value}");
 						foreach (var part in pr.Part)
 						{
+							if (part.Name == "trace")
+								continue;
 							Console.WriteLine($" Part Value: {part.Value} ({part.Name}) ({NormalizeTypeName(part.Value.TypeName)})");
-							results.Add(part.Value.ToTypedElement());
+							var resultItem = part.Value.ToTypedElement();
+							var normalizedTypeName = NormalizeTypeName(part.Name);
+							if (resultItem.InstanceType != normalizedTypeName && resultItem.InstanceType == "string")
+							{
+								// normalize the value
+								if (normalizedTypeName == "integer")
+									resultItem = Hl7.Fhir.ElementModel.ElementNode.ForPrimitive(int.Parse(part.Value.ToString()));
+								if (normalizedTypeName == "boolean")
+									resultItem = Hl7.Fhir.ElementModel.ElementNode.ForPrimitive(bool.Parse(part.Value.ToString()));
+							}
+							results.Add(resultItem);
 						}
 					}
 				}
