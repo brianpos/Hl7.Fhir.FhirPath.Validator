@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Xml.Serialization;
 using Test.Fhir.R4B.FhirPath.Validator;
@@ -291,6 +292,13 @@ namespace Test.Fhir.FhirPath.Validator
 
 		private string NormalizeTypeName(string typeName)
 		{
+			// workaround for Python engine
+			if (typeName == "int")
+				return "integer";
+			if (typeName == "bool")
+				return "boolean";
+
+			// regular work
 			if (!typeName.Contains(".") && !typeName.EndsWith("."))
 				return typeName;
 			if (typeName == "System.Quantity")
@@ -347,7 +355,10 @@ namespace Test.Fhir.FhirPath.Validator
 			testCase.Description = testDescription;
 			testCase.Expression = expression;
 			testCase.FailureMessage = failureMessage;
-			if (failureMessage?.Contains("Not implemented") == true || failureMessage?.Contains("Unhandled function '") == true)
+			if (failureMessage?.Contains("Not implemented") == true
+				|| failureMessage?.Contains("Unhandled function '") == true
+				|| failureMessage?.Contains("No method in multimethod 'compile-node' for dispatch value: ") == true
+				)
 			{
 				testCase.NotImplemented = true;
 				testCase.Result = null;
@@ -429,7 +440,7 @@ namespace Test.Fhir.FhirPath.Validator
 			new ServerDetails("fhirpath.js-4.4.0 (r5)", "http://localhost:3000/api", "fhirpath-r5"),
 			new ServerDetails("Java 6.5.27 (R5)", "https://fhirpath-lab-java-g5c4bfdrb8ejamar.australiaeast-01.azurewebsites.net/fhir5", "fhirpath-r5"),
 			new ServerDetails("fhirpath-py 1.0.3", "https://fhirpath.emr.beda.software/fhir", "fhirpath"),
-			new ServerDetails("Aidbox (R5)", "https://fhir-validator.aidbox.app/r5", ""),
+			new ServerDetails("Aidbox", "https://fhir-validator.aidbox.app/r5", ""),
 		};
 
 		public static IEnumerable<object[]> TestDataKeysForServers
@@ -526,7 +537,47 @@ namespace Test.Fhir.FhirPath.Validator
 			List<ITypedElement> results = new List<ITypedElement>();
 			try
 			{
-				var result = server.WholeSystemOperation(serverDetails.OperationName, parameters);
+				Resource result;
+				if (string.IsNullOrEmpty(serverDetails.OperationName))
+				{
+					// If no operation name, use the evaluate operation
+					// have to resort back to manually calling the HTTP endpoint
+					HttpClient serverRaw = new HttpClient();
+					// set accept header for json
+					serverRaw.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/fhir+json"));
+					HttpContent content = new StringContent(parameters.ToJson(), System.Text.Encoding.UTF8, "application/fhir+json");
+					var rawResult = serverRaw.PostAsync(serverDetails.ServerUrl, content).WaitResult();
+					if (rawResult.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+						Assert.Inconclusive($"Service Unavailable");
+					var resultJson = rawResult.Content.ReadAsStringAsync().WaitResult();
+					result = new CustomSerializer().DeserializeFromJson(resultJson);
+					// result = new FhirJsonPocoDeserializer().DeserializeResource(resultJson);
+					// tweak any valueInteger values to be an integer, not a string type
+					if (result is Parameters resultParams2)
+					{
+						var partResults = resultParams2.Parameter.Where(p => p.Name == "result").ToList();
+
+						foreach (var pr in partResults)
+						{
+							foreach (var part in pr.Part)
+							{
+								if (part.Name == "trace")
+									continue;
+								var normalizedTypeName = NormalizeTypeName(part.Name);
+								if (normalizedTypeName == "integer" && part.Value is Integer i && i.ObjectValue is string s)
+								{
+									// normalize the value
+									i.ObjectValue = int.Parse(s);
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					// Use the whole system operation
+					result = server.WholeSystemOperation(serverDetails.OperationName, parameters);
+				}
 
 				if (result is Parameters resultParams)
 				{
@@ -564,7 +615,7 @@ namespace Test.Fhir.FhirPath.Validator
 				if (result is OperationOutcome outcome)
 				{
 					// an error occurred, check that is expected.
-					var errMessage = string.Join("\n", outcome.Issue?.Select(i => $"{i.Severity} ({i.Code}) {i.Details?.Text}"));
+					var errMessage = string.Join("\n", outcome.Issue?.Select(i => $"{i.Severity} ({i.Code}) {i.Details?.Text ?? i.Diagnostics}"));
 					if (testData.expressionValid != null)
 						RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, true);
 					else
