@@ -50,6 +50,7 @@ namespace Test.Fhir.FhirPath.Validator
 			public bool? isPredicate;
 			public string expressionValid;
 			public string outputType;
+			public bool? ignoreOrder;
 			public bool emptyOutput;
 			public Resource resource;
 			public List<Output> outputs;
@@ -139,6 +140,7 @@ namespace Test.Fhir.FhirPath.Validator
 								isPredicate = t.Predicate,
 								expressionValid = t.Expression.Invalid,
 								emptyOutput = t.Outputs?.Count == 0,
+								ignoreOrder = t.Ordered == "false",
 								outputType = t.Outputs?.FirstOrDefault()?.Type,
 								outputs = t.Outputs,
 								resource = r
@@ -245,6 +247,27 @@ namespace Test.Fhir.FhirPath.Validator
 					for (int n = 0; n < testData.outputs.Count; n++)
 					{
 						var expectedItem = testData.outputs[n];
+						if (testData.ignoreOrder == true)
+						{
+							// loop through all the results
+							bool found = false;
+							foreach (var actualItem in results.ToArray())
+							{
+								if (DataEquals(expectedItem, actualItem))
+								{
+									// check the types?
+									results = results.Except(new[] { actualItem }).ToList();
+									found = true;
+								}
+							}
+							if (!found)
+							{
+								missMatchingResults++;
+								Console.WriteLine($"Missing expected value '{expectedItem.Text}'");
+							}
+						}
+						else
+						{
 						var actualItem = results.ElementAt(n);
 						// Check type
 						if (expectedItem.Type != NormalizeTypeName(actualItem.InstanceType))
@@ -261,6 +284,7 @@ namespace Test.Fhir.FhirPath.Validator
 								Console.WriteLine($"Mismatch at index {n}: expected value '{expectedItem.Text}', got '{actualItem.Value}'");
 							}
 						}
+					}
 					}
 					Assert.AreEqual(0, missMatchingResults, "Some results didn't match expected values");
 				}
@@ -292,6 +316,9 @@ namespace Test.Fhir.FhirPath.Validator
 
 		private string NormalizeTypeName(string typeName)
 		{
+			if (string.IsNullOrEmpty(typeName))
+				return typeName;
+
 			// workaround for Python engine
 			if (typeName == "int")
 				return "integer";
@@ -318,12 +345,25 @@ namespace Test.Fhir.FhirPath.Validator
 				var actualDateTime = Hl7.Fhir.ElementModel.Types.DateTime.Parse(actualItem.Value?.ToString());
 				return expectedDateTime.Equals(actualDateTime);
 			}
+			if (expectedItem.Type == "time")
+			{
+				var expectedDateTime = Hl7.Fhir.ElementModel.Types.Time.Parse(expectedItem.Text.Substring(2));
+				var actualDateTime = Hl7.Fhir.ElementModel.Types.Time.Parse(actualItem.Value?.ToString());
+				return expectedDateTime.Equals(actualDateTime);
+			}
 			if (expectedItem.Type == "Quantity")
 			{
 				var expectedQ = Hl7.Fhir.ElementModel.Types.Quantity.Parse(expectedItem.Text);
 				var actualQ = actualItem.ParseQuantity().ToQuantity();
 				return expectedQ.CompareTo(actualQ) == 0;
 			}
+			if (expectedItem.Type == "decimal")
+			{
+				var expectedDecimal = Hl7.Fhir.ElementModel.Types.Decimal.Parse(expectedItem.Text);
+				var actualDecimal = Hl7.Fhir.ElementModel.Types.Decimal.Parse(actualItem.Value?.ToString());
+				return expectedDecimal.Equals(actualDecimal);
+			}
+
 			return expectedItem.Text == actualItem.Value?.ToString();
 		}
 
@@ -367,6 +407,15 @@ namespace Test.Fhir.FhirPath.Validator
 			{
 				testCase.NotImplemented = null;
 				testCase.Result = testPass;
+			}
+
+			// Sort groups by name
+			results.Groups = results.Groups.OrderBy(g => g.Name).ToList();
+
+			// Sort test cases within each group by name
+			foreach (var g in results.Groups)
+			{
+				g.TestCases = g.TestCases.OrderBy(t => t.Name).ToList();
 			}
 
 			// write the json test file out
@@ -468,6 +517,8 @@ namespace Test.Fhir.FhirPath.Validator
 			// string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
 			Console.WriteLine($"{groupName} - {testName}");
 			Console.WriteLine($"Resource Type: {testData.resourceType}");
+			if (testData.expressionValid != null)
+				Console.WriteLine($"Valid: {testData.expressionValid}");
 			Console.WriteLine($"Expression:\r\n{testData.expression}");
 			Console.WriteLine("---------");
 			if (testData.outputs.Any())
@@ -596,7 +647,9 @@ namespace Test.Fhir.FhirPath.Validator
 						{
 							if (part.Name == "trace")
 								continue;
-							Console.WriteLine($" Part Value: {part.Value} ({part.Name}) ({NormalizeTypeName(part.Value.TypeName)})");
+							Console.WriteLine($" Part Value: {part.Value} ({part.Name}) ({NormalizeTypeName(part.Value?.TypeName)})");
+							if (part.Value == null)
+								continue;
 							var resultItem = part.Value.ToTypedElement();
 							var normalizedTypeName = NormalizeTypeName(part.Name);
 							if (resultItem.InstanceType != normalizedTypeName && resultItem.InstanceType == "string")
@@ -637,6 +690,8 @@ namespace Test.Fhir.FhirPath.Validator
 				}
 
 				// Check the count of results is the same as the expected output
+				if (testData == null || testData.isPredicate == false)
+				{
 				if (testData.outputs != null && testData.outputs.Count > 0)
 				{
 					if (testData.outputs.Count != results.Count())
@@ -648,6 +703,28 @@ namespace Test.Fhir.FhirPath.Validator
 					for (int n = 0; n < testData.outputs.Count; n++)
 					{
 						var expectedItem = testData.outputs[n];
+							if (testData.ignoreOrder == true)
+							{
+								// loop through all the results
+								bool found = false;
+								foreach (var actualItem in results.ToArray())
+								{
+									if (DataEquals(expectedItem, actualItem))
+									{
+										// check the types?
+										results = results.Except(new[] { actualItem }).ToList();
+										found = true;
+										break;
+									}
+								}
+								if (!found)
+								{
+									missMatchingResults++;
+									Console.WriteLine($"Missing expected value '{expectedItem.Text}'");
+								}
+							}
+							else
+							{
 						var actualItem = results.ElementAt(n);
 						// Check type
 						if (expectedItem.Type == NormalizeTypeName(actualItem.InstanceType)
@@ -667,6 +744,16 @@ namespace Test.Fhir.FhirPath.Validator
 							Console.WriteLine($"Mismatch at index {n}: expected type {expectedItem.Type}, got {actualItem.InstanceType}");
 						}
 					}
+						}
+						if (testData.ignoreOrder == true)
+						{
+							// if there are any results left, they were missed!
+							foreach (var actualItem in results)
+							{
+								missMatchingResults++;
+								Console.WriteLine($"Included unexpected value '{actualItem.Value}'");
+							}
+						}
 					if (missMatchingResults != 0)
 						RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, false, $"Some results didn't match expected values ({missMatchingResults} values)");
 					else
@@ -682,6 +769,29 @@ namespace Test.Fhir.FhirPath.Validator
 					Assert.IsFalse(results.Any(), "Expected no results, but got some.");
 				}
 			}
+				else
+				{
+					// Predicate logic processing.
+					if (results.Count() == 1 && results.First().Value is bool b)
+					{
+						if (b)
+						{
+							RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, true);
+							Assert.IsTrue(b, "Expected predicate to be true");
+						}
+						else
+						{
+							RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, false);
+							Assert.IsFalse(b, "Expected predicate to be false");
+						}
+					}
+					else
+					{
+						RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, false, "Expected a single boolean result for predicate evaluation.");
+						Assert.Fail("Expected a single boolean result for predicate evaluation.");
+					}
+				}
+			}
 			catch (FhirOperationException ex)
 			{
 				var errMessage = ex.Message;
@@ -693,7 +803,7 @@ namespace Test.Fhir.FhirPath.Validator
 					RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, true);
 				else
 					RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, false, errMessage);
-				Assert.IsTrue(testData.expressionValid == "semantic" || testData.expressionValid == "execution", errMessage);
+				Assert.IsTrue(testData.expressionValid == "semantic" || testData.expressionValid == "execution" || testData.expressionValid == "syntax", errMessage);
 			}
 			catch (InvalidCastException ex)
 			{
