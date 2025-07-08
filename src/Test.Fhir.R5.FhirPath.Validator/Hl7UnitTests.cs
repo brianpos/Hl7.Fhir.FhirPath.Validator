@@ -472,15 +472,17 @@ namespace Test.Fhir.FhirPath.Validator
 
 		public record ServerDetails
 		{
-			public ServerDetails(string engineName, string serverUrl, string opName)
+			public ServerDetails(string engineName, string serverUrl, string opName, string? useEngineName = null)
 			{
 				EngineName = engineName;
 				ServerUrl = serverUrl;
 				OperationName = opName;
+				UseEngineName = useEngineName;
 			}
 			public string EngineName { get; init; }
 			public string ServerUrl { get; init; }
 			public string OperationName { get; init; }
+			public string? UseEngineName { get; set; }
 		}
 
 		public static IEnumerable<ServerDetails> servers = new List<ServerDetails>
@@ -489,7 +491,7 @@ namespace Test.Fhir.FhirPath.Validator
 			new ServerDetails("fhirpath.js-4.4.0 (r5)", "http://localhost:3000/api", "fhirpath-r5"),
 			new ServerDetails("Java 6.5.27 (R5)", "https://fhirpath-lab-java-g5c4bfdrb8ejamar.australiaeast-01.azurewebsites.net/fhir5", "fhirpath-r5"),
 			new ServerDetails("fhirpath-py 1.0.3", "https://fhirpath.emr.beda.software/fhir", "fhirpath"),
-			new ServerDetails("Aidbox", "https://fhir-validator.aidbox.app/r5", ""),
+			new ServerDetails("Aidbox", "https://fhir-validator.aidbox.app/r5", "", "Aidbox FHIR R5"),
 		};
 
 		public static IEnumerable<object[]> TestDataKeysForServers
@@ -513,6 +515,7 @@ namespace Test.Fhir.FhirPath.Validator
 		{
 			var serverDetails = servers.FirstOrDefault(s => s.EngineName == engineName);
 			var testData = _testData[$"{groupName}.{testName}"];
+			engineName = serverDetails?.UseEngineName ?? engineName;
 
 			// string expression = "(software.empty() and implementation.empty()) or kind != 'requirements'";
 			Console.WriteLine($"{groupName} - {testName}");
@@ -580,11 +583,22 @@ namespace Test.Fhir.FhirPath.Validator
 			{
 				Name = "variables"
 			});
-			parameters.Parameter.Add(new Parameters.ParameterComponent()
+			var resourceParam = new Parameters.ParameterComponent()
 			{
 				Name = "resource",
-				Resource = testData.resource
-			});
+				// Resource = testData.resource
+			};
+			if (!engineName.Contains("Java"))
+			{
+				resourceParam.Resource = testData.resource;
+			}
+			else
+			{
+				resourceParam.SetStringExtension(
+					"http://fhir.forms-lab.com/StructureDefinition/json-value",
+					testData.resource.ToJson());
+			}
+			parameters.Parameter.Add(resourceParam);
 			List<ITypedElement> results = new List<ITypedElement>();
 			try
 			{
@@ -672,8 +686,10 @@ namespace Test.Fhir.FhirPath.Validator
 					if (testData.expressionValid != null)
 						RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, true);
 					else
+					{
 						RecordResult(engineName, groupName, testName, testData.testDescription, testData.expression, false, errMessage);
 					Assert.Inconclusive(errMessage);
+					}
 					return;
 				}
 
