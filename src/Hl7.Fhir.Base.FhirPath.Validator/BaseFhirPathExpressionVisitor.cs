@@ -887,12 +887,14 @@ namespace Hl7.Fhir.FhirPath.Validator
 				AppendLine();
 
 			List<FhirPathVisitorProps> argTypes = new();
+			_stackPropertyContext.Push(_stackExpressionContext.Any() ? _stackExpressionContext.Peek() : this.RootContext); // arguments evaluated on $this
 			foreach (var arg in expression.Arguments)
 			{
 				if (argTypes.Count > 0)
 					Append(", ");
 				argTypes.Add(arg.Accept(this));
 			}
+			_stackPropertyContext.Pop(); // arguments processed, no need for $this now
 
 			DecrementTab();
 			Append(")");

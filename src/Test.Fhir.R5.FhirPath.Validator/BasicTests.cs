@@ -152,6 +152,62 @@ namespace Test.Fhir.FhirPath.Validator
         }
 
         [TestMethod]
+        public void TestMethodArguments()
+        {
+            string expression = "name.given.substring(name.count())";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(Patient));
+            var pe = _compiler.Parse(expression);
+            pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsTrue(visitor.Outcome.Success);
+        }
+
+        [TestMethod]
+        public void TestMethodArgumentsInvalid()
+        {
+            string expression = "Patient.name.family.first().substring(2, length()-5)";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(Patient));
+            var pe = _compiler.Parse(expression);
+            pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsFalse(visitor.Outcome.Success);
+        }
+
+        [TestMethod]
+        public void TestMethodArgumentsInvalid2()
+        {
+            string expression = "Patient.name.select(family.first().substring(2, length()-5))";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(Patient));
+            var pe = _compiler.Parse(expression);
+            pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsFalse(visitor.Outcome.Success);
+        }
+
+        [TestMethod]
+        public void TestMethodArgumentsValid2()
+        {
+            string expression = "Patient.name.family.first().select(substring(2, length()-5))";
+            Console.WriteLine(expression);
+            var visitor = new FhirPathExpressionVisitor();
+            visitor.AddInputType(typeof(Patient));
+            var pe = _compiler.Parse(expression);
+            pe.Accept(visitor);
+            Console.WriteLine(visitor.ToString());
+            Console.WriteLine(visitor.Outcome.ToXml(new FhirXmlSerializationSettings() { Pretty = true }));
+            Assert.IsTrue(visitor.Outcome.Success);
+        }
+
+        [TestMethod]
         public void TestMethodVariable()
         {
             string expression = "%surprise.family";

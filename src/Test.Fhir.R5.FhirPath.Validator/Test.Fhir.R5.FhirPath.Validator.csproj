@@ -8,7 +8,7 @@
 
   <!-- Compiler settings -->
   <PropertyGroup>
-    <LangVersion>11.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="CustomSerializers.cs" />
