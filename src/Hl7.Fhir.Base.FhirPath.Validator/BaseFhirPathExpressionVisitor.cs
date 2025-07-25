@@ -1410,10 +1410,27 @@ namespace Hl7.Fhir.FhirPath.Validator
 				}
 			}
 
+			// Really need to move this operator functionality out in the same way the functions have been moved into a symbol table
+			if (be.Op == "in")
+			{
+				if (leftResult.IsCollection())
+				{
+					var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
+					{
+						Severity = Hl7.Fhir.Model.OperationOutcome.IssueSeverity.Error,
+						Code = Hl7.Fhir.Model.OperationOutcome.IssueType.MultipleMatches,
+						Details = new Hl7.Fhir.Model.CodeableConcept() { Text = $"Operator '{be.Op}' left argument must be a single item" },
+						Diagnostics = $"{leftResult} {be.Op} {rightResult}"
+					};
+					ReportErrorLocation(be, issue);
+					Outcome.AddIssue(issue);
+				}
+			}
+
 			if (nonCollectionOperators.Contains(be.Op))
 			{
 				// Validate that neither of the arguments are collections
-				if (leftResult.IsCollection() != rightResult.IsCollection())
+				if (leftResult.IsCollection() || rightResult.IsCollection())
 				{
 					var issue = new Hl7.Fhir.Model.OperationOutcome.IssueComponent()
 					{
