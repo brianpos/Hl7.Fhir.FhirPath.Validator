@@ -14,10 +14,10 @@ namespace Test.Fhir.R4B.FhirPath.Validator
         [XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
 
-		[XmlAttribute(AttributeName = "mode")]
-		public string Mode { get; set; }
+        [XmlAttribute(AttributeName = "mode")]
+        public string Mode { get; set; }
 
-		[XmlAttribute(AttributeName = "description")]
+        [XmlAttribute(AttributeName = "description")]
         public string Description { get; set; }
 
         [XmlAttribute(AttributeName = "reference")]
@@ -71,6 +71,9 @@ namespace Test.Fhir.R4B.FhirPath.Validator
 
         [XmlAttribute(AttributeName = "predicate")]
         public bool Predicate { get; set; }
+
+        [XmlAttribute(AttributeName = "ordered")]
+        public string Ordered { get; set; }
     }
 
     public class Expression
