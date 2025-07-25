@@ -650,7 +650,7 @@ namespace Test.Fhir.FhirPath.Validator
 					var partEngine = partParams?.Part.FirstOrDefault(p => p.Name == "evaluator")?.Value?.ToString();
 					if (!string.IsNullOrEmpty(partEngine))
 					{
-						engineName = partEngine;
+						engineName = serverDetails?.UseEngineName ?? partEngine;
 					}
 					var partResults = resultParams.Parameter.Where(p => p.Name == "result").ToList();
 
