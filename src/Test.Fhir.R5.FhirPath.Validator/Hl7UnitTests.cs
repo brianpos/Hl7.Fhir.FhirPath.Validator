@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
+using System.Xml;
 using System.Xml.Serialization;
 using Test.Fhir.R4B.FhirPath.Validator;
 using Test.Fhir.R5.FhirPath.Validator;
@@ -83,15 +84,14 @@ namespace Test.Fhir.FhirPath.Validator
 				var result = new List<TestData>();
 				string testFileXml = @"c:\git\hl7\fhir-test-cases\r5\fhirpath\tests-fhir-r5.xml";
 				string testBasePath = @"c:\git\hl7\fhir-test-cases\r5\";
-				XmlSerializer serializer = new XmlSerializer(typeof(Tests));
 				var jsonSettings = new FhirJsonPocoDeserializerSettings() { Validator = null, AnnotateResourceParseExceptions = true, ValidateOnFailedParse = false };
 				var jsonDS = new FhirJsonPocoDeserializer(jsonSettings);
 				var xmlSettings = new FhirXmlPocoDeserializerSettings() { Validator = null, AnnotateResourceParseExceptions = true, ValidateOnFailedParse = false };
 				var xmlDS = new FhirXmlPocoDeserializer(xmlSettings);
 
-				using (StreamReader reader = new StreamReader(testFileXml))
+				using (var fs = File.OpenRead(testFileXml))
 				{
-					Tests tests = (Tests)serializer.Deserialize(reader);
+					Tests tests = DeserializeTests(fs);
 					//Console.WriteLine($"Name: {tests.Name}");
 					//Console.WriteLine($"{tests.Description}");
 					//Console.WriteLine("-----------------------------------");
@@ -150,6 +150,36 @@ namespace Test.Fhir.FhirPath.Validator
 				}
 				return result;
 			}
+		}
+
+		internal static Tests DeserializeTests(Stream stream)
+		{
+			using (XmlReader xmlReader = XmlReader.Create(stream))
+			{
+				xmlReader.MoveToContent();
+				var ns = xmlReader.NamespaceURI;
+				XmlSerializer serializer = string.IsNullOrEmpty(ns)
+					? new XmlSerializer(typeof(Tests))
+					: new XmlSerializer(typeof(Tests), ns);
+				return (Tests)serializer.Deserialize(xmlReader);
+			}
+		}
+
+		[TestMethod]
+		public async System.Threading.Tasks.Task TestDeserializeLatestTestsXml()
+		{
+			using var httpClient = new HttpClient();
+			var url = "https://raw.githubusercontent.com/FHIR/fhir-test-cases/master/r5/fhirpath/tests-fhir-r5.xml";
+			using var response = await httpClient.GetAsync(url);
+			response.EnsureSuccessStatusCode();
+
+			using var stream = await response.Content.ReadAsStreamAsync();
+			Tests tests = DeserializeTests(stream);
+
+			Assert.IsNotNull(tests, "Deserialized Tests object should not be null");
+			Assert.IsNotNull(tests.Groups, "Tests should contain groups");
+			Assert.IsTrue(tests.Groups.Count > 0, "Tests should contain at least one group");
+			Assert.IsFalse(string.IsNullOrEmpty(tests.Name), "Tests should have a name");
 		}
 
 		[TestMethod]
