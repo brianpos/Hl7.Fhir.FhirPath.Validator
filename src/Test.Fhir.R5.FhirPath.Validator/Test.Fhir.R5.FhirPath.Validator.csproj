@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net80</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
 
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -19,15 +19,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Hl7.Fhir.Specification.Data.R5" Version="5.12.2" />
-    <PackageReference Include="Hl7.Fhir.Specification.R5" Version="5.12.2" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageReference Include="MSTest.TestAdapter" Version="3.10.3" />
-    <PackageReference Include="MSTest.TestFramework" Version="3.10.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
+    <PackageReference Include="Hl7.Fhir.Specification.Data.R5" Version="5.13.2" />
+    <PackageReference Include="Hl7.Fhir.Specification.R5" Version="5.13.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="4.1.0" />
+    <PackageReference Include="MSTest.TestFramework" Version="4.1.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.3" />
     <ProjectReference Include="..\Hl7.Fhir.R5.FhirPath.Validator\Hl7.Fhir.R5.FhirPath.Validator.csproj" />
   </ItemGroup>
 
