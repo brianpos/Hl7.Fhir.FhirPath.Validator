@@ -45,7 +45,7 @@ namespace Hl7.Fhir.FhirPath.Validator
         public bool UseVariableAsName { get; set; }
 
         /// <summary>
-        /// Set the Context of the expression to verify 
+        /// Set the Context of the expression to verify
         /// (and also set the resource, rootResource and context variables)
         /// </summary>
         /// <param name="definitionPath">StructureDefinition style path to the property (not a fhirpath expression)</param>
@@ -268,7 +268,7 @@ namespace Hl7.Fhir.FhirPath.Validator
 
         public override FhirPathVisitorProps VisitConstant(ConstantExpression expression)
         {
-            // ChildExpression ce 
+            // ChildExpression ce
             var r = new FhirPathVisitorProps();
             var t = _mi.GetTypeForFhirType(expression.ExpressionType.Name);
             if (t != null)
@@ -663,7 +663,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                     if (t.IsCollection)
                         bForceCollections = true;
                 }
-                // 
+                //
                 //foreach (var t in props)
                 //{
                 //    System.Diagnostics.Trace.WriteLine($"select params: {t}");
@@ -682,7 +682,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                 // Check the supported reference types for this resource type
                 foreach (var t in focus.Types)
                 {
-                    var v = t.PropertyMapping.NativeProperty.GetCustomAttribute<ReferencesAttribute>();
+                    var v = t.PropertyMapping?.NativeProperty.GetCustomAttribute<ReferencesAttribute>();
                     if (v?.Resources?.Any() == true)
                     {
                         // retrieve the classname
@@ -941,7 +941,7 @@ namespace Hl7.Fhir.FhirPath.Validator
                 }
             }
 
-            // Now iterate in with these result types 
+            // Now iterate in with these result types
             _stackPropertyContext.Push(result);
             _stackExpressionContext.Push(result);
             bool bChanged = false;

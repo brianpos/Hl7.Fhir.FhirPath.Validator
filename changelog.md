@@ -3,6 +3,9 @@
 
 ## Change log ##
 
+### June 30 2026
+* Resolve Null Object Reference error handling the `resolve()` function
+
 ### June 3 2026
 * Update FirelySDK dependency to 5.13.4
 
